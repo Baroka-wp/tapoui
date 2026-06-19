@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Bébé Tape-Tape !</title>
+<style>
+  /* Reset & base */
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg1: #FFE066;
+    --bg2: #FF9A76;
+    --accent: #FF6B6B;
+    --green: #51E898;
+    --pink: #FF85A1;
+    --cyan: #56E0D0;
+  }
+
+  body {
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    font-family: 'Nunito', sans-serif;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+    transition: background 0.4s ease;
+  }
+
+  /* Le canvas pour les particules */
+  #particleCanvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  /* Zone des emojis flottants */
+  .emoji-layer {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 2;
+    pointer-events: none;
+  }
+
+  .emoji-pop {
+    position: absolute;
+    font-size: 4rem;
+    animation: emojiFly 1.5s ease-out forwards;
+    pointer-events: none;
+    filter: drop-shadow(0 4px 12px rgba(0,0,0,0.15));
+  }
+
+  @keyframes emojiFly {
+    0% { transform: scale(0) rotate(-20deg); opacity: 1; }
+    20% { transform: scale(1.4) rotate(10deg); opacity: 1; }
+    100% { transform: scale(0.3) rotate(40deg) translateY(-300px); opacity: 0; }
+  }
+
+  /* Personnage central */
+  .character-container {
+    position: fixed;
+    bottom: 15%;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 3;
+    pointer-events: none;
+  }
+
+  .character {
+    width: 160px;
+    height: 160px;
+    position: relative;
+    transition: transform 0.15s ease;
+  }
+
+  .character.bounce {
+    animation: charBounce 0.5s ease;
+  }
+
+  .character.wiggle {
+    animation: charWiggle 0.6s ease;
+  }
+
+  .character.spin {
+    animation: charSpin 0.7s ease;
+  }
+
+  .character.grow {
+    animation: charGrow 0.5s ease;
+  }
+
+  @keyframes charBounce {
+    0% { transform: translateY(0) scale(1); }
+    30% { transform: translateY(-60px) scale(1.15); }
+    50% { transform: translateY(-40px) scale(0.95); }
+    70% { transform: translateY(-20px) scale(1.05); }
+    100% { transform: translateY(0) scale(1); }
+  }
+
+  @keyframes charWiggle {
+    0%, 100% { transform: rotate(0deg); }
+    15% { transform: rotate(-18deg); }
+    30% { transform: rotate(16deg); }
+    45% { transform: rotate(-14deg); }
+    60% { transform: rotate(10deg); }
+    75% { transform: rotate(-6deg); }
+  }
+
+  @keyframes charSpin {
+    0% { transform: rotate(0deg) scale(1); }
+    50% { transform: rotate(180deg) scale(1.2); }
+    100% { transform: rotate(360deg) scale(1); }
+  }
+
+  @keyframes charGrow {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.5); }
+    100% { transform: scale(1); }
+  }
+
+  /* Corps du personnage */
+  .body {
+    width: 140px;
+    height: 130px;
+    background: var(--accent);
+    border-radius: 50% 50% 48% 48%;
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    box-shadow: inset -10px -10px 20px rgba(0,0,0,0.1), 0 8px 30px rgba(0,0,0,0.15);
+    transition: background 0.3s, border-radius 0.3s;
+  }
+
+  /* Yeux */
+  .eye {
+    width: 32px;
+    height: 36px;
+    background: white;
+    border-radius: 50%;
+    position: absolute;
+    top: 28px;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+    overflow: hidden;
+  }
+  .eye.left { left: 28px; }
+  .eye.right { right: 28px; }
+
+  .pupil {
+    width: 16px;
+    height: 18px;
+    background: #2D2D2D;
+    border-radius: 50%;
+    position: absolute;
+    bottom: 6px;
+    left: 50%;
+    transform: translateX(-50%);
+    transition: transform 0.2s ease;
+  }
+
+  .pupil .shine {
+    width: 6px;
+    height: 6px;
+    background: white;
+    border-radius: 50%;
+    position: absolute;
+    top: 2px;
+    right: 1px;
+  }
+
+  /* Yeux différents selon l'humeur */
+  .eye.happy {
+    height: 10px;
+    border-radius: 10px 10px 0 0;
+    top: 38px;
+    background: #2D2D2D;
+  }
+  .eye.happy .pupil { display: none; }
+
+  .eye.surprised {
+    width: 40px;
+    height: 42px;
+  }
+  .eye.surprised .pupil {
+    width: 10px;
+    height: 10px;
+  }
+
+  .eye.love {
+    background: transparent;
+    box-shadow: none;
+  }
+  .eye.love .pupil { display: none; }
+  .eye.love::after {
+    content: '';
+    width: 24px;
+    height: 24px;
+    background: #FF4466;
+    transform: rotate(45deg);
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    margin-top: -12px;
+    margin-left: -12px;
+    border-radius: 0;
+    clip-path: path('M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z');
+  }
+
+  /* Bouche */
+  .mouth {
+    position: absolute;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    transition: all 0.2s ease;
+  }
+
+  .mouth.smile {
+    width: 40px;
+    height: 20px;
+    border: 4px solid #2D2D2D;
+    border-color: transparent transparent #2D2D2D transparent;
+    border-radius: 0 0 40px 40px;
+  }
+
+  .mouth.open {
+    width: 30px;
+    height: 30px;
+    background: #2D2D2D;
+    border-radius: 50%;
+  }
+
+  .mouth.big-smile {
+    width: 55px;
+    height: 28px;
+    border: 4px solid #2D2D2D;
+    border-color: transparent transparent #2D2D2D transparent;
+    border-radius: 0 0 50px 50px;
+  }
+
+  .mouth.o {
+    width: 22px;
+    height: 22px;
+    border: 4px solid #2D2D2D;
+    border-radius: 50%;
+    background: #8B2252;
+  }
+
+  /* Joues */
+  .cheek {
+    width: 22px;
+    height: 14px;
+    background: rgba(255, 130, 130, 0.5);
+    border-radius: 50%;
+    position: absolute;
+    top: 55px;
+    transition: opacity 0.3s;
+  }
+  .cheek.left { left: 12px; }
+  .cheek.right { right: 12px; }
+
+  /* Petit chapeau */
+  .hat {
+    position: absolute;
+    top: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 35px solid transparent;
+    border-right: 35px solid transparent;
+    border-bottom: 40px solid var(--green);
+    transition: border-bottom-color 0.3s;
+  }
+  .hat::after {
+    content: '';
+    position: absolute;
+    top: 36px;
+    left: -45px;
+    width: 90px;
+    height: 12px;
+    background: var(--green);
+    border-radius: 6px;
+    transition: background 0.3s;
+  }
+
+  /* Jambes */
+  .legs {
+    position: absolute;
+    bottom: -16px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80px;
+    display: flex;
+    justify-content: space-between;
+  }
+  .leg {
+    width: 24px;
+    height: 20px;
+    background: #E85555;
+    border-radius: 0 0 12px 12px;
+    transition: background 0.3s;
+  }
+
+  /* Compteur de taps */
+  .tap-counter {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 10;
+    background: rgba(255,255,255,0.85);
+    backdrop-filter: blur(10px);
+    padding: 12px 20px;
+    border-radius: 20px;
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: #444;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    pointer-events: none;
+  }
+
+  /* Formes géométriques flottantes */
+  .shape {
+    position: fixed;
+    z-index: 1;
+    pointer-events: none;
+    opacity: 0.15;
+    animation: floatShape 8s ease-in-out infinite;
+  }
+
+  @keyframes floatShape {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-30px) rotate(180deg); }
+  }
+
+  /* Bulle de dialogue */
+  .speech-bubble {
+    position: absolute;
+    top: -60px;
+    left: 50%;
+    transform: translateX(-50%) scale(0);
+    background: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 1.8rem;
+    white-space: nowrap;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    pointer-events: none;
+  }
+  .speech-bubble.show {
+    transform: translateX(-50%) scale(1);
+  }
+  .speech-bubble::after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0; height: 0;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-top: 10px solid white;
+  }
+
+  /* Flash d'écran */
+  .screen-flash {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.1s ease;
+  }
+  .screen-flash.active {
+    opacity: 0.25;
+  }
+
+  /* Texte indicatif */
+  .hint {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    color: rgba(0,0,0,0.35);
+    font-size: 0.85rem;
+    font-weight: 600;
+    pointer-events: none;
+    animation: hintPulse 2s ease-in-out infinite;
+  }
+
+  @keyframes hintPulse {
+    0%, 100% { opacity: 0.35; }
+    50% { opacity: 0.6; }
+  }
+
+  /* Réduit mouvement si préféré */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+</style>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<!-- Flash d'écran -->
+<div class="screen-flash" id="screenFlash"></div>
+
+<!-- Canvas pour particules -->
+<canvas id="particleCanvas"></canvas>
+
+<!-- Couche d'emojis -->
+<div class="emoji-layer" id="emojiLayer"></div>
+
+<!-- Formes décoratives de fond -->
+<div class="shape" style="top:10%;left:8%;width:60px;height:60px;border:6px solid #FF6B6B;border-radius:50%;animation-delay:0s;"></div>
+<div class="shape" style="top:20%;right:12%;width:50px;height:50px;background:#51E898;border-radius:8px;animation-delay:2s;"></div>
+<div class="shape" style="bottom:30%;left:15%;width:40px;height:40px;border:5px solid #FFE066;border-radius:12px;animation-delay:4s;transform:rotate(45deg);"></div>
+<div class="shape" style="top:60%;right:8%;width:70px;height:70px;border:6px solid #56E0D0;border-radius:50%;animation-delay:1s;"></div>
+<div class="shape" style="bottom:15%;right:25%;width:45px;height:45px;background:#FF85A1;border-radius:50%;animation-delay:3s;"></div>
+<div class="shape" style="top:40%;left:5%;width:35px;height:35px;background:#FFE066;border-radius:6px;animation-delay:5s;"></div>
+
+<!-- Compteur -->
+<div class="tap-counter" id="tapCounter">0 coups !</div>
+
+<!-- Personnage -->
+<div class="character-container" id="characterContainer">
+  <div class="character" id="character">
+    <div class="speech-bubble" id="speechBubble"></div>
+    <div class="hat" id="hat"></div>
+    <div class="body" id="charBody">
+      <div class="eye left" id="eyeLeft"><div class="pupil"><div class="shine"></div></div></div>
+      <div class="eye right" id="eyeRight"><div class="pupil"><div class="shine"></div></div></div>
+      <div class="cheek left"></div>
+      <div class="cheek right"></div>
+      <div class="mouth smile" id="mouth"></div>
+    </div>
+    <div class="legs">
+      <div class="leg" id="legLeft"></div>
+      <div class="leg" id="legRight"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Indice -->
+<div class="hint" id="hint">Tape n'importe où !</div>
+
+<script>
+  // ============================
+  // Données et configuration
+  // ============================
+
+  // Liste d'emojis amusants pour bébé
+  const EMOJIS = [
+    '🌟','⭐','🌈','🎈','🎉','🎊','🎁','❤️','💖','💕',
+    '🌻','🌺','🌸','🍀','🍎','🍊','🍋','🍇','🍓','🍉',
+    '🐱','🐶','🐻','🐰','🦊','🐸','🐝','🦋','🐢','🐙',
+    '🚀','✈️','🚗','🎈','🎸','🎺','🥁','🎵','🎶','🔔',
+    '👶','🍼','🧸','🪀','🎯','🏆','👑','💎','🧲','🔮',
+    '🦄','🐉','🦁','🐯','🐮','🐷','🐵','🦄','🐝','🐛',
+    '🍕','🧁','🍩','🍪','🍫','🍦','🧀','🥕','🌽','🥐'
+  ];
+
+  // Couleurs de fond joyeuses
+  const BG_COLORS = [
+    ['#FFE066','#FFAD42'],
+    ['#FF9A76','#FF6B6B'],
+    ['#A8E6CF','#56E0D0'],
+    ['#FFD3E0','#FF85A1'],
+    ['#D4FC79','#96E6A1'],
+    ['#FFEAA7','#FDCB6E'],
+    ['#C3FAE8','#63E6BE'],
+    ['#FFC9C9','#FF8585'],
+    ['#B5EAD7','#7DCEA0'],
+    ['#FFECD2','#FCB69F'],
+  ];
+
+  // Couleurs du personnage
+  const CHAR_COLORS = ['#FF6B6B','#51E898','#56E0D0','#FFE066','#FF85A1','#FF9A76','#A8E6CF','#FDCB6E'];
+  const HAT_COLORS = ['#51E898','#56E0D0','#FFE066','#FF85A1','#FF9A76','#FF6B6B','#A8E6CF','#FDCB6E'];
+
+  // Animations possibles du personnage
+  const CHAR_ANIMS = ['bounce','wiggle','spin','grow'];
+
+  // États des yeux
+  const EYE_STATES = ['normal','happy','surprised','love'];
+
+  // États de la bouche
+  const MOUTH_STATES = ['smile','open','big-smile','o'];
+
+  // Bulles de dialogue
+  const SPEECHES = ['😄','😆','🥰','😮','🎉','✨','🌟','💪','🤩','👏','🎊','❤️','🦄','🌈','🎵'];
+
+  // Compteur
+  let tapCount = 0;
+
+  // Éléments DOM
+  const canvas = document.getElementById('particleCanvas');
+  const ctx = canvas.getContext('2d');
+  const emojiLayer = document.getElementById('emojiLayer');
+  const character = document.getElementById('character');
+  const charBody = document.getElementById('charBody');
+  const eyeLeft = document.getElementById('eyeLeft');
+  const eyeRight = document.getElementById('eyeRight');
+  const mouth = document.getElementById('mouth');
+  const hat = document.getElementById('hat');
+  const legLeft = document.getElementById('legLeft');
+  const legRight = document.getElementById('legRight');
+  const speechBubble = document.getElementById('speechBubble');
+  const screenFlash = document.getElementById('screenFlash');
+  const tapCounter = document.getElementById('tapCounter');
+  const hint = document.getElementById('hint');
+
+  // ============================
+  // Audio - sons générés en direct
+  // ============================
+
+  let audioCtx = null;
+
+  // Initialiser l'AudioContext au premier geste (obligatoire sur mobile)
+  function ensureAudio() {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+  }
+
+  // Sons amusants variés
+  function playFunSound() {
+    ensureAudio();
+    const type = Math.floor(Math.random() * 6);
+    const now = audioCtx.currentTime;
+
+    if (type === 0) {
+      // "Boing" montante
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(300, now);
+      osc.frequency.exponentialRampToValueAtTime(900, now + 0.15);
+      gain.gain.setValueAtTime(0.3, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+      osc.connect(gain).connect(audioCtx.destination);
+      osc.start(now);
+      osc.stop(now + 0.3);
+    } else if (type === 1) {
+      // "Ding" cristallin
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(1200, now);
+      gain.gain.setValueAtTime(0.25, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+      osc.connect(gain).connect(audioCtx.destination);
+      osc.start(now);
+      osc.stop(now + 0.5);
+    } else if (type === 2) {
+      // Gamme montante rapide (3 notes)
+      [400, 500, 650].forEach((freq, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(freq, now + i * 0.08);
+        gain.gain.setValueAtTime(0.12, now + i * 0.08);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.08 + 0.15);
+        osc.connect(gain).connect(audioCtx.destination);
+        osc.start(now + i * 0.08);
+        osc.stop(now + i * 0.08 + 0.15);
+      });
+    } else if (type === 3) {
+      // "Pop" bulle
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(600, now);
+      osc.frequency.exponentialRampToValueAtTime(200, now + 0.1);
+      gain.gain.setValueAtTime(0.35, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+      osc.connect(gain).connect(audioCtx.destination);
+      osc.start(now);
+      osc.stop(now + 0.12);
+    } else if (type === 4) {
+      // Note aiguë mignonne
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, now);
+      osc.frequency.setValueAtTime(1100, now + 0.1);
+      gain.gain.setValueAtTime(0.2, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+      osc.connect(gain).connect(audioCtx.destination);
+      osc.start(now);
+      osc.stop(now + 0.4);
+    } else {
+      // "Wobble" drôle
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(200, now);
+      osc.frequency.linearRampToValueAtTime(500, now + 0.1);
+      osc.frequency.linearRampToValueAtTime(150, now + 0.25);
+      gain.gain.setValueAtTime(0.1, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+      osc.connect(gain).connect(audioCtx.destination);
+      osc.start(now);
+      osc.stop(now + 0.3);
+    }
+  }
+
+  // ============================
+  // Particules sur canvas
+  // ============================
+
+  let particles = [];
+
+  function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+
+  class Particle {
+    constructor(x, y, color) {
+      this.x = x;
+      this.y = y;
+      this.color = color;
+      this.size = Math.random() * 10 + 4;
+      const angle = Math.random() * Math.PI * 2;
+      const speed = Math.random() * 8 + 3;
+      this.vx = Math.cos(angle) * speed;
+      this.vy = Math.sin(angle) * speed - 3;
+      this.gravity = 0.15;
+      this.life = 1;
+      this.decay = Math.random() * 0.02 + 0.015;
+      this.shape = Math.floor(Math.random() * 3); // 0=cercle, 1=carré, 2=étoile
+      this.rotation = Math.random() * Math.PI * 2;
+      this.rotSpeed = (Math.random() - 0.5) * 0.2;
+    }
+
+    update() {
+      this.x += this.vx;
+      this.y += this.vy;
+      this.vy += this.gravity;
+      this.vx *= 0.99;
+      this.life -= this.decay;
+      this.rotation += this.rotSpeed;
+    }
+
+    draw(ctx) {
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, this.life);
+      ctx.translate(this.x, this.y);
+      ctx.rotate(this.rotation);
+      ctx.fillStyle = this.color;
+
+      const s = this.size * this.life;
+      if (this.shape === 0) {
+        ctx.beginPath();
+        ctx.arc(0, 0, Math.max(0.5, s), 0, Math.PI * 2);
+        ctx.fill();
+      } else if (this.shape === 1) {
+        ctx.fillRect(-s, -s, s * 2, s * 2);
+      } else {
+        // Étoile simple
+        drawStar(ctx, 0, 0, 5, Math.max(0.5, s), Math.max(0.3, s * 0.5));
+        ctx.fill();
+      }
+
+      ctx.restore();
+    }
+  }
+
+  function drawStar(ctx, cx, cy, spikes, outerR, innerR) {
+    let rot = Math.PI / 2 * 3;
+    const step = Math.PI / spikes;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - outerR);
+    for (let i = 0; i < spikes; i++) {
+      ctx.lineTo(cx + Math.cos(rot) * outerR, cy + Math.sin(rot) * outerR);
+      rot += step;
+      ctx.lineTo(cx + Math.cos(rot) * innerR, cy + Math.sin(rot) * innerR);
+      rot += step;
+    }
+    ctx.closePath();
+  }
+
+  function spawnParticles(x, y, count) {
+    const colors = ['#FF6B6B','#51E898','#FFE066','#56E0D0','#FF85A1','#FF9A76','#FDCB6E','#A8E6CF','#FF4466','#FFD700'];
+    for (let i = 0; i < count; i++) {
+      particles.push(new Particle(x, y, colors[Math.floor(Math.random() * colors.length)]));
+    }
+  }
+
+  // Boucle d'animation des particules
+  function animateParticles() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    particles = particles.filter(p => p.life > 0);
+    particles.forEach(p => {
+      p.update();
+      p.draw(ctx);
+    });
+    requestAnimationFrame(animateParticles);
+  }
+  animateParticles();
+
+  // ============================
+  // Emojis qui poppent
+  // ============================
+
+  function spawnEmoji(x, y) {
+    const emoji = document.createElement('div');
+    emoji.className = 'emoji-pop';
+    emoji.textContent = EMOJIS[Math.floor(Math.random() * EMOJIS.length)];
+    // Position aléatoire autour du point de tap
+    const offsetX = (Math.random() - 0.5) * 200;
+    const offsetY = (Math.random() - 0.5) * 150;
+    emoji.style.left = Math.max(20, Math.min(window.innerWidth - 80, x + offsetX)) + 'px';
+    emoji.style.top = Math.max(20, Math.min(window.innerHeight - 80, y + offsetY)) + 'px';
+    // Taille variée
+    const size = Math.random() * 3 + 2.5;
+    emoji.style.fontSize = size + 'rem';
+    emojiLayer.appendChild(emoji);
+    // Nettoyage après l'animation
+    emoji.addEventListener('animationend', () => emoji.remove());
+  }
+
+  // ============================
+  // Changement de fond
+  // ============================
+
+  function changeBackground() {
+    const pair = BG_COLORS[Math.floor(Math.random() * BG_COLORS.length)];
+    document.body.style.background = `linear-gradient(135deg, ${pair[0]}, ${pair[1]})`;
+  }
+
+  // ============================
+  // Flash d'écran
+  // ============================
+
+  function flashScreen() {
+    const flashColors = ['#FFE066','#FF6B6B','#51E898','#56E0D0','#FF85A1','#fff'];
+    screenFlash.style.background = flashColors[Math.floor(Math.random() * flashColors.length)];
+    screenFlash.classList.add('active');
+    setTimeout(() => screenFlash.classList.remove('active'), 120);
+  }
+
+  // ============================
+  // Personnage - réactions
+  // ============================
+
+  function reactCharacter() {
+    // Changer couleur du corps
+    const bodyColor = CHAR_COLORS[Math.floor(Math.random() * CHAR_COLORS.length)];
+    charBody.style.background = bodyColor;
+
+    // Changer couleur du chapeau
+    const hatColor = HAT_COLORS[Math.floor(Math.random() * HAT_COLORS.length)];
+    hat.style.borderBottomColor = hatColor;
+    // Le ::after du chapeau ne peut pas être changé en JS directement,
+    // on utilise une variable CSS
+    document.documentElement.style.setProperty('--green', hatColor);
+    // Forcer le style inline pour le ::after via une feuille dynamique
+    updateHatAfter(hatColor);
+
+    // Couleurs des jambes (plus sombre)
+    legLeft.style.background = bodyColor;
+    legRight.style.background = bodyColor;
+
+    // Animation du personnage
+    const anim = CHAR_ANIMS[Math.floor(Math.random() * CHAR_ANIMS.length)];
+    character.classList.remove('bounce','wiggle','spin','grow');
+    // Forcer le reflow pour relancer l'animation
+    void character.offsetWidth;
+    character.classList.add(anim);
+
+    // Yeux
+    const eyeState = EYE_STATES[Math.floor(Math.random() * EYE_STATES.length)];
+    eyeLeft.className = 'eye left ' + eyeState;
+    eyeRight.className = 'eye right ' + eyeState;
+    if (eyeState === 'normal') {
+      eyeLeft.innerHTML = '<div class="pupil"><div class="shine"></div></div>';
+      eyeRight.innerHTML = '<div class="pupil"><div class="shine"></div></div>';
+    } else {
+      eyeLeft.innerHTML = '';
+      eyeRight.innerHTML = '';
+    }
+
+    // Bouche
+    const mouthState = MOUTH_STATES[Math.floor(Math.random() * MOUTH_STATES.length)];
+    mouth.className = 'mouth ' + mouthState;
+
+    // Bulle de dialogue (70% de chance)
+    if (Math.random() < 0.7) {
+      speechBubble.textContent = SPEECHES[Math.floor(Math.random() * SPEECHES.length)];
+      speechBubble.classList.add('show');
+      setTimeout(() => speechBubble.classList.remove('show'), 800);
+    }
+
+    // Déplacer les pupilles aléatoirement si yeux normaux
+    if (eyeState === 'normal') {
+      const pupils = document.querySelectorAll('.pupil');
+      pupils.forEach(p => {
+        const dx = (Math.random() - 0.5) * 8;
+        const dy = (Math.random() - 0.5) * 4;
+        p.style.transform = `translateX(calc(-50% + ${dx}px)) translateY(${dy}px)`;
+      });
+    }
+  }
+
+  // Petite astuce pour le ::after du chapeau
+  let hatStyleEl = null;
+  function updateHatAfter(color) {
+    if (!hatStyleEl) {
+      hatStyleEl = document.createElement('style');
+      document.head.appendChild(hatStyleEl);
+    }
+    hatStyleEl.textContent = `.hat::after { background: ${color} !important; }`;
+  }
+
+  // ============================
+  // Action principale à chaque tap
+  // ============================
+
+  function onTap(x, y) {
+    // Masquer l'indice après le premier tap
+    if (tapCount === 0) {
+      hint.style.display = 'none';
+    }
+
+    tapCount++;
+    tapCounter.textContent = tapCount + ' coup' + (tapCount > 1 ? 's' : '') + ' !';
+
+    // Son
+    playFunSound();
+
+    // Particules au point de tap
+    spawnParticles(x, y, 15 + Math.floor(Math.random() * 10));
+
+    // Emojis (2-4 par tap)
+    const emojiCount = Math.floor(Math.random() * 3) + 2;
+    for (let i = 0; i < emojiCount; i++) {
+      setTimeout(() => spawnEmoji(x, y), i * 80);
+    }
+
+    // Flash
+    flashScreen();
+
+    // Fond change toutes les 3 touches
+    if (tapCount % 3 === 0) {
+      changeBackground();
+    }
+
+    // Personnage réagit
+    reactCharacter();
+
+    // De temps en temps, grosse rafale de particules depuis le personnage
+    if (Math.random() < 0.3) {
+      const rect = character.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      spawnParticles(cx, cy, 30);
+    }
+  }
+
+  // ============================
+  // Événements
+  // ============================
+
+  // Clavier
+  document.addEventListener('keydown', (e) => {
+    // Position aléatoire sur l'écran pour le spawn
+    const x = Math.random() * window.innerWidth;
+    const y = Math.random() * window.innerHeight * 0.7;
+    onTap(x, y);
+  });
+
+  // Souris / tactile
+  document.addEventListener('mousedown', (e) => {
+    onTap(e.clientX, e.clientY);
+  });
+
+  document.addEventListener('touchstart', (e) => {
+    // Réagir à chaque point de contact
+    for (let i = 0; i < e.touches.length; i++) {
+      onTap(e.touches[i].clientX, e.touches[i].clientY);
+    }
+  }, { passive: true });
+
+  // Mouvement de souris génère aussi quelques particules (légèrement)
+  let mouseMoveThrottle = 0;
+  document.addEventListener('mousemove', (e) => {
+    mouseMoveThrottle++;
+    if (mouseMoveThrottle % 8 === 0 && tapCount > 0) {
+      particles.push(new Particle(e.clientX, e.clientY, '#FFD700'));
+    }
+  });
+
+  // ============================
+  // Initialisation
+  // ============================
+
+  // Fond de départ
+  changeBackground();
+
+  // Animation d'attente douce du personnage (respiration)
+  let breathPhase = 0;
+  function breathe() {
+    breathPhase += 0.03;
+    if (!character.classList.contains('bounce') &&
+        !character.classList.contains('wiggle') &&
+        !character.classList.contains('spin') &&
+        !character.classList.contains('grow')) {
+      const s = 1 + Math.sin(breathPhase) * 0.03;
+      character.style.transform = `scale(${s})`;
+    }
+    requestAnimationFrame(breathe);
+  }
+  breathe();
+
+  // Nettoyer les animations terminées du personnage
+  character.addEventListener('animationend', () => {
+    character.classList.remove('bounce','wiggle','spin','grow');
+    character.style.transform = 'scale(1)';
+  });
+</script>
+</body>
+</html>
