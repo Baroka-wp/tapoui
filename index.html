@@ -2,963 +2,1904 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Bébé Tape-Tape Ben</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Tapoui</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet">
+
 <style>
-  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-
-  :root {
-    --bg1: #FFE066;
-    --bg2: #FF9A76;
-    --accent: #FF6B6B;
-    --green: #51E898;
-    --pink: #FF85A1;
-    --cyan: #56E0D0;
-  }
-
-  body {
-    width: 100vw;
-    height: 100vh;
-    overflow: hidden;
-    font-family: 'Nunito', sans-serif;
-    cursor: pointer;
-    user-select: none;
+  /* ===========================================================
+     RESET & BASE
+     But : empêcher toute interaction parasite sur mobile
+     (zoom, scroll élastique, sélection, menu contextuel)
+     =========================================================== */
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
     -webkit-user-select: none;
-    touch-action: manipulation;
-    transition: background 0.4s ease;
+    -moz-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
   }
 
-  /* ===== ÉCRAN D'ACCUEIL ===== */
-  #startScreen {
+  html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+    touch-action: none;
+    font-family: 'Nunito', sans-serif;
+    background: #1a1a2e;
+  }
+
+  #app {
     position: fixed;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  /* ===========================================================
+     ÉCRAN D'ACCUEIL
+     Le bouton "Jouer" crée l'AudioContext de façon synchrone
+     dans le handler, condition obligatoire pour iOS Safari.
+     =========================================================== */
+  #ecran-accueil {
+    position: absolute;
+    inset: 0;
     z-index: 100;
-    background: linear-gradient(135deg, #FFE066, #FF9A76);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 30px;
-    transition: opacity 0.5s ease, transform 0.5s ease;
-  }
-  #startScreen.hidden {
-    opacity: 0;
-    transform: scale(1.2);
-    pointer-events: none;
+    gap: 2.2rem;
+    background: linear-gradient(135deg, #ff9a8b 0%, #ff6a88 25%, #ff99ac 50%, #fecfef 75%, #a8edea 100%);
+    background-size: 300% 300%;
+    animation: degradeFlux 8s ease infinite;
   }
 
-  .start-title {
-    font-size: clamp(2.5rem, 10vw, 4.5rem);
-    font-weight: 900;
-    color: #fff;
-    text-shadow: 0 4px 20px rgba(0,0,0,0.15);
-    letter-spacing: -1px;
+  @keyframes degradeFlux {
+    0%   { background-position: 0% 50%; }
+    50%  { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
   }
 
-  .start-subtitle {
-    font-size: clamp(1rem, 3.5vw, 1.3rem);
-    color: rgba(255,255,255,0.8);
+  #logo-app {
+    font-size: clamp(1.1rem, 4vw, 1.5rem);
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    color: rgba(255,255,255,0.85);
+    text-shadow: 0 2px 8px rgba(0,0,0,0.18);
+    text-transform: uppercase;
+    margin-bottom: -1rem;
+  }
+
+  /* Bloc des scores sauvegardés, affiché si une partie a déjà été jouée */
+  #bloc-scores {
+    display: flex;
+    gap: clamp(0.8rem, 4vw, 1.6rem);
+  }
+
+  .score-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4em;
+    background: rgba(255,255,255,0.88);
+    border-radius: 100px;
+    padding: 0.45em 0.9em;
+    box-shadow: 0 5px 14px rgba(0,0,0,0.15);
+    font-weight: 800;
+  }
+
+  .score-emoji {
+    font-size: 1.2em;
+  }
+
+  .score-valeur {
+    color: #ff5d8f;
+    font-size: 1.15em;
+  }
+
+  .score-label {
+    color: #888;
+    font-size: 0.78em;
     font-weight: 700;
   }
 
-  .start-btn {
-    width: clamp(140px, 40vw, 200px);
-    height: clamp(140px, 40vw, 200px);
-    border-radius: 50%;
-    border: none;
-    background: var(--accent);
-    color: white;
-    font-family: 'Nunito', sans-serif;
-    font-size: clamp(1.5rem, 5vw, 2.2rem);
+  #titre-accueil {
+    font-size: clamp(1.8rem, 7vw, 3.2rem);
     font-weight: 900;
+    color: #fff;
+    text-shadow: 0 4px 0 rgba(0,0,0,0.15), 0 8px 20px rgba(0,0,0,0.2);
+    text-align: center;
+    animation: titreRebond 2s ease-in-out infinite;
+    padding: 0 1rem;
+  }
+
+  @keyframes titreRebond {
+    0%, 100% { transform: translateY(0) rotate(-2deg); }
+    50%      { transform: translateY(-14px) rotate(2deg); }
+  }
+
+  /* Grille de sélection de personnage (3 choix) */
+  #grille-personnages {
+    display: flex;
+    gap: clamp(0.8rem, 4vw, 1.8rem);
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: 0 1rem;
+  }
+
+  .carte-personnage {
+    width: clamp(92px, 24vw, 140px);
+    height: clamp(92px, 24vw, 140px);
+    background: rgba(255,255,255,0.85);
+    border: 5px solid transparent;
+    border-radius: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     cursor: pointer;
-    box-shadow: 0 8px 30px rgba(255,107,107,0.5), inset 0 -4px 0 rgba(0,0,0,0.15);
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
-    animation: btnPulse 2s ease-in-out infinite;
+    box-shadow: 0 8px 0 rgba(0,0,0,0.12), 0 14px 24px rgba(0,0,0,0.18);
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
     -webkit-tap-highlight-color: transparent;
   }
-  .start-btn:active {
-    transform: scale(0.92);
-    box-shadow: 0 4px 15px rgba(255,107,107,0.4), inset 0 -2px 0 rgba(0,0,0,0.15);
+
+  .carte-personnage:active {
+    transform: scale(0.92) translateY(4px);
   }
 
-  @keyframes btnPulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.08); }
+  .carte-personnage.carte-selectionnee {
+    border-color: #ffd166;
+    transform: scale(1.08) translateY(-4px);
+    box-shadow: 0 6px 0 rgba(0,0,0,0.12), 0 18px 30px rgba(0,0,0,0.22), 0 0 0 6px rgba(255,209,102,0.35);
   }
 
-  .start-emojis {
-    font-size: clamp(2rem, 7vw, 3.5rem);
-    animation: startFloat 3s ease-in-out infinite;
-  }
-
-  @keyframes startFloat {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-12px); }
-  }
-
-  /* Petit personnage sur l'écran d'accueil */
-  .start-char {
-    width: 90px;
-    height: 85px;
-    background: var(--accent);
-    border-radius: 50% 50% 48% 48%;
+  /* Mini-personnages de la sélection : 3 silhouettes en CSS pur */
+  .mini-personnage {
     position: relative;
-    box-shadow: inset -6px -6px 12px rgba(0,0,0,0.1), 0 6px 20px rgba(0,0,0,0.12);
-    animation: startBounce 1.5s ease-in-out infinite;
+    width: 64%;
+    height: 64%;
   }
-  .start-char .se {
-    width: 18px; height: 20px;
-    background: white;
+
+  .mini-oeil {
+    position: absolute;
+    top: 32%;
+    width: 18%;
+    height: 18%;
+    background: #2d2d3a;
     border-radius: 50%;
-    position: absolute;
-    top: 18px;
-    box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
   }
-  .start-char .se.l { left: 18px; }
-  .start-char .se.r { right: 18px; }
-  .start-char .se .sp {
-    width: 9px; height: 10px;
-    background: #2D2D2D;
+  .mini-oeil-gauche { left: 26%; }
+  .mini-oeil-droite { right: 26%; }
+
+  .mini-corps {
+    position: absolute;
+    inset: 0;
+  }
+
+  /* Personnage 1 : rond (corps classique) */
+  .mini-corps-rond {
+    background: #ffb347;
     border-radius: 50%;
+    box-shadow: inset -6px -8px 0 rgba(0,0,0,0.08);
+  }
+  .mini-chapeau-triangle {
     position: absolute;
-    bottom: 3px; left: 50%;
-    transform: translateX(-50%);
-  }
-  .start-char .sm {
-    width: 24px; height: 12px;
-    border: 3px solid #2D2D2D;
-    border-color: transparent transparent #2D2D2D transparent;
-    border-radius: 0 0 24px 24px;
-    position: absolute;
-    bottom: 18px; left: 50%;
-    transform: translateX(-50%);
-  }
-  .start-char .sc {
-    width: 14px; height: 9px;
-    background: rgba(255,130,130,0.5);
-    border-radius: 50%;
-    position: absolute;
-    top: 36px;
-  }
-  .start-char .sc.l { left: 6px; }
-  .start-char .sc.r { right: 6px; }
-
-  @keyframes startBounce {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-15px); }
-  }
-
-  /* ===== FIN ÉCRAN D'ACCUEIL ===== */
-
-  #particleCanvas {
-    position: fixed;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    z-index: 1;
-    pointer-events: none;
-  }
-
-  .emoji-layer {
-    position: fixed;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    z-index: 2;
-    pointer-events: none;
-  }
-
-  .emoji-pop {
-    position: absolute;
-    font-size: 4rem;
-    animation: emojiFly 1.5s ease-out forwards;
-    pointer-events: none;
-    filter: drop-shadow(0 4px 12px rgba(0,0,0,0.15));
-  }
-
-  @keyframes emojiFly {
-    0% { transform: scale(0) rotate(-20deg); opacity: 1; }
-    20% { transform: scale(1.4) rotate(10deg); opacity: 1; }
-    100% { transform: scale(0.3) rotate(40deg) translateY(-300px); opacity: 0; }
-  }
-
-  .character-container {
-    position: fixed;
-    bottom: 15%;
+    top: -28%;
     left: 50%;
     transform: translateX(-50%);
-    z-index: 3;
+    width: 0;
+    height: 0;
+    border-left: 16% solid transparent;
+    border-right: 16% solid transparent;
+    border-bottom: 34% solid #5b9bd5;
+  }
+
+  /* Personnage 2 : carré arrondi (robot doux) */
+  .mini-corps-carre {
+    background: #7aa7ff;
+    border-radius: 26%;
+    box-shadow: inset -6px -8px 0 rgba(0,0,0,0.08);
+  }
+  .mini-chapeau-rond {
+    position: absolute;
+    top: -22%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 36%;
+    height: 36%;
+    background: #ff8c42;
+    border-radius: 50%;
+  }
+
+  /* Personnage 3 : étoile (créature céleste) */
+  .mini-corps-etoile {
+    background: #c084fc;
+    clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+  }
+  .mini-chapeau-pointe {
+    position: absolute;
+    top: -10%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 14%;
+    height: 30%;
+    background: #ffd166;
+    border-radius: 50% 50% 0 0;
+  }
+
+  #bouton-jouer {
+    font-family: 'Nunito', sans-serif;
+    font-size: clamp(1.4rem, 5.5vw, 2.2rem);
+    font-weight: 900;
+    color: #ff6a88;
+    background: #fff;
+    border: none;
+    border-radius: 100px;
+    padding: 1.1em 2.2em;
+    box-shadow: 0 8px 0 #d1d1e0, 0 14px 30px rgba(0,0,0,0.25);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: opacity 0.3s ease, transform 0.2s ease;
+  }
+
+  #bouton-jouer:not(:disabled) {
+    animation: boutonPulse 1.4s ease-in-out infinite;
+  }
+
+  #bouton-jouer:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    box-shadow: 0 8px 0 rgba(209,209,224,0.5), 0 14px 30px rgba(0,0,0,0.12);
+  }
+
+  @keyframes boutonPulse {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.06); }
+  }
+
+  #bouton-jouer:active:not(:disabled) {
+    transform: scale(0.92) translateY(6px);
+    box-shadow: 0 2px 0 #d1d1e0, 0 6px 16px rgba(0,0,0,0.2);
+  }
+
+  .cache {
+    display: none !important;
+  }
+
+  /* ===========================================================
+     SCÈNE DE JEU
+     =========================================================== */
+  #scene {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(160deg, #a8edea, #fed6e3);
+    transition: background 1.4s ease;
+    touch-action: none;
+  }
+
+  /* Canvas des particules, derrière tout, plein écran */
+  #canvas-particules {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+  }
+
+  /* Blocs-cibles flottants : montent depuis le bas, éclatables au tap */
+  #formes-flottantes {
+    position: absolute;
+    inset: 0;
+    z-index: 15;
+    overflow: hidden;
     pointer-events: none;
   }
 
-  .character {
-    width: 160px;
-    height: 160px;
-    position: relative;
-    transition: transform 0.15s ease;
+  .bloc-cible {
+    position: absolute;
+    opacity: 0.92;
+    animation: flotterMonte linear forwards;
+    pointer-events: auto;
+    cursor: pointer;
+    filter: drop-shadow(0 6px 10px rgba(0,0,0,0.18));
+    will-change: transform;
+    touch-action: none;
   }
 
-  .character.bounce { animation: charBounce 0.5s ease; }
-  .character.wiggle { animation: charWiggle 0.6s ease; }
-  .character.spin { animation: charSpin 0.7s ease; }
-  .character.grow { animation: charGrow 0.5s ease; }
+  @keyframes flotterMonte {
+    0%   { transform: translateY(115vh) translateX(0) rotate(0deg); }
+    100% { transform: translateY(-20vh) translateX(var(--derive, 0px)) rotate(var(--rotation-totale, 360deg)); }
+  }
 
-  @keyframes charBounce {
-    0% { transform: translateY(0) scale(1); }
-    30% { transform: translateY(-60px) scale(1.15); }
-    50% { transform: translateY(-40px) scale(0.95); }
-    70% { transform: translateY(-20px) scale(1.05); }
-    100% { transform: translateY(0) scale(1); }
+  /* Petit tortillement continu pendant la montée, indépendant de la trajectoire */
+  .bloc-cible-interieur {
+    width: 100%;
+    height: 100%;
+    animation: blocTortille 1.8s ease-in-out infinite;
   }
-  @keyframes charWiggle {
-    0%, 100% { transform: rotate(0deg); }
-    15% { transform: rotate(-18deg); }
-    30% { transform: rotate(16deg); }
-    45% { transform: rotate(-14deg); }
-    60% { transform: rotate(10deg); }
-    75% { transform: rotate(-6deg); }
+
+  @keyframes blocTortille {
+    0%, 100% { transform: scale(1) rotate(-4deg); }
+    50%      { transform: scale(1.08) rotate(4deg); }
   }
-  @keyframes charSpin {
-    0% { transform: rotate(0deg) scale(1); }
-    50% { transform: rotate(180deg) scale(1.2); }
-    100% { transform: rotate(360deg) scale(1); }
+
+  /* État d'éclatement : le bloc se disloque rapidement puis disparaît */
+  .bloc-eclate {
+    animation: blocEclate 0.32s ease-out forwards !important;
+    pointer-events: none;
   }
-  @keyframes charGrow {
-    0% { transform: scale(1); }
-    40% { transform: scale(1.5); }
+
+  @keyframes blocEclate {
+    0%   { transform: scale(1) rotate(0deg); opacity: 1; }
+    40%  { transform: scale(1.5) rotate(15deg); opacity: 1; }
+    100% { transform: scale(0.2) rotate(40deg); opacity: 0; }
+  }
+
+  /* Bloc non touché qui sort par le haut : fondu doux, aucune pénalité */
+  .bloc-rate {
+    animation: blocFondu 0.5s ease-out forwards !important;
+  }
+
+  @keyframes blocFondu {
+    0%   { opacity: 0.9; }
+    100% { opacity: 0; }
+  }
+
+  /* Flash plein écran à chaque coup */
+  #flash {
+    position: absolute;
+    inset: 0;
+    z-index: 50;
+    background: #fff;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .flash-actif {
+    animation: flashEclat 0.25s ease-out;
+  }
+
+  @keyframes flashEclat {
+    0%   { opacity: 0.55; }
+    100% { opacity: 0; }
+  }
+
+  /* ===========================================================
+     COMPTEUR
+     =========================================================== */
+  #compteur {
+    position: absolute;
+    top: max(16px, env(safe-area-inset-top));
+    right: 16px;
+    z-index: 60;
+    background: rgba(255,255,255,0.85);
+    border-radius: 100px;
+    padding: 0.5em 1em;
+    font-size: clamp(1.1rem, 4vw, 1.6rem);
+    font-weight: 800;
+    color: #ff6a88;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.12);
+    display: flex;
+    align-items: center;
+    gap: 0.3em;
+    pointer-events: none;
+  }
+
+  #compteur-valeur {
+    display: inline-block;
+    min-width: 1.4ch;
+    text-align: center;
+  }
+
+  .compteur-pop {
+    animation: compteurPop 0.3s ease;
+  }
+
+  @keyframes compteurPop {
+    0%   { transform: scale(1); }
+    40%  { transform: scale(1.4); }
     100% { transform: scale(1); }
   }
 
-  .body {
-    width: 140px;
-    height: 130px;
-    background: var(--accent);
-    border-radius: 50% 50% 48% 48%;
+  /* ===========================================================
+     PERSONNAGE CENTRAL (CSS pur)
+     =========================================================== */
+  #zone-personnage {
     position: absolute;
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    box-shadow: inset -10px -10px 20px rgba(0,0,0,0.1), 0 8px 30px rgba(0,0,0,0.15);
-    transition: background 0.3s, border-radius 0.3s;
+    inset: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
   }
 
-  .eye {
-    width: 32px;
-    height: 36px;
-    background: white;
+  #personnage {
+    position: relative;
+    width: clamp(150px, 38vw, 260px);
+    height: clamp(150px, 38vw, 260px);
+    animation: respiration 2.6s ease-in-out infinite;
+  }
+
+  @keyframes respiration {
+    0%, 100% { transform: scale(1) rotate(0deg); }
+    50%      { transform: scale(1.045) rotate(0.5deg); }
+  }
+
+  /* Le corps : on anime une variable de transform via classes JS */
+  #corps {
+    position: absolute;
+    inset: 0;
+    border-radius: 50% 50% 46% 46% / 56% 56% 44% 44%;
+    background: #ffb347;
+    box-shadow:
+      inset -14px -18px 0 rgba(0,0,0,0.08),
+      inset 14px 14px 0 rgba(255,255,255,0.18),
+      0 18px 30px rgba(0,0,0,0.18);
+    transition: background 0.35s ease, border-radius 0.4s ease, clip-path 0.4s ease;
+  }
+
+  /* Variante "carré" : robot doux aux coins arrondis */
+  .forme-carre #corps {
+    border-radius: 22%;
+    clip-path: none;
+  }
+
+  /* Variante "étoile" : créature céleste à 5 branches */
+  .forme-etoile #corps {
+    border-radius: 0;
+    clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+  }
+
+  /* Joues roses */
+  .joue {
+    position: absolute;
+    width: 16%;
+    height: 10%;
+    background: rgba(255, 90, 120, 0.55);
     border-radius: 50%;
-    position: absolute;
-    top: 28px;
-    box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
-    overflow: hidden;
+    top: 56%;
+    filter: blur(1px);
   }
-  .eye.left { left: 28px; }
-  .eye.right { right: 28px; }
+  .joue-gauche { left: 6%; }
+  .joue-droite { right: 6%; }
 
-  .pupil {
-    width: 16px;
-    height: 18px;
-    background: #2D2D2D;
+  /* Yeux */
+  .oeil {
+    position: absolute;
+    top: 32%;
+    width: 17%;
+    height: 17%;
+    background: #fff;
     border-radius: 50%;
-    position: absolute;
-    bottom: 6px;
-    left: 50%;
-    transform: translateX(-50%);
-    transition: transform 0.2s ease;
-  }
-  .pupil .shine {
-    width: 6px; height: 6px;
-    background: white;
-    border-radius: 50%;
-    position: absolute;
-    top: 2px; right: 1px;
-  }
-
-  .eye.happy {
-    height: 10px;
-    border-radius: 10px 10px 0 0;
-    top: 38px;
-    background: #2D2D2D;
-  }
-  .eye.happy .pupil { display: none; }
-
-  .eye.surprised { width: 40px; height: 42px; }
-  .eye.surprised .pupil { width: 10px; height: 10px; }
-
-  .eye.love {
-    background: transparent;
-    box-shadow: none;
-  }
-  .eye.love .pupil { display: none; }
-
-  .mouth {
-    position: absolute;
-    bottom: 30px;
-    left: 50%;
-    transform: translateX(-50%);
+    box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
     transition: all 0.2s ease;
   }
-  .mouth.smile {
-    width: 40px; height: 20px;
-    border: 4px solid #2D2D2D;
-    border-color: transparent transparent #2D2D2D transparent;
-    border-radius: 0 0 40px 40px;
-  }
-  .mouth.open {
-    width: 30px; height: 30px;
-    background: #2D2D2D;
-    border-radius: 50%;
-  }
-  .mouth.big-smile {
-    width: 55px; height: 28px;
-    border: 4px solid #2D2D2D;
-    border-color: transparent transparent #2D2D2D transparent;
-    border-radius: 0 0 50px 50px;
-  }
-  .mouth.o {
-    width: 22px; height: 22px;
-    border: 4px solid #2D2D2D;
-    border-radius: 50%;
-    background: #8B2252;
-  }
+  .oeil-gauche { left: 24%; }
+  .oeil-droite { right: 24%; }
 
-  .cheek {
-    width: 22px; height: 14px;
-    background: rgba(255,130,130,0.5);
+  .pupille {
+    width: 55%;
+    height: 55%;
+    background: #2d2d3a;
     border-radius: 50%;
-    position: absolute;
-    top: 55px;
+    position: relative;
   }
-  .cheek.left { left: 12px; }
-  .cheek.right { right: 12px; }
-
-  .hat {
-    position: absolute;
-    top: -20px; left: 50%;
-    transform: translateX(-50%);
-    width: 0; height: 0;
-    border-left: 35px solid transparent;
-    border-right: 35px solid transparent;
-    border-bottom: 40px solid var(--green);
-    transition: border-bottom-color 0.3s;
-  }
-  .hat::after {
+  .pupille::after {
     content: '';
     position: absolute;
-    top: 36px; left: -45px;
-    width: 90px; height: 12px;
-    background: var(--green);
-    border-radius: 6px;
-    transition: background 0.3s;
+    top: 14%;
+    left: 18%;
+    width: 35%;
+    height: 35%;
+    background: #fff;
+    border-radius: 50%;
   }
 
-  .legs {
+  /* États des yeux, contrôlés par classes sur #personnage */
+  .yeux-heureux .oeil {
+    height: 5%;
+    border-radius: 0 0 50% 50% / 0 0 100% 100%;
+    top: 36%;
+    background: transparent;
+    box-shadow: none;
+    border-bottom: 6px solid #2d2d3a;
+  }
+  .yeux-heureux .pupille { display: none; }
+
+  .yeux-surpris .oeil {
+    width: 23%;
+    height: 23%;
+    top: 28%;
+  }
+
+  .yeux-amoureux .oeil {
+    background: transparent;
+    box-shadow: none;
+    font-size: 1.6rem;
+  }
+  .yeux-amoureux .pupille { display: none; }
+  .yeux-amoureux .oeil::before {
+    content: '💖';
+    font-size: clamp(1.2rem, 6vw, 2rem);
+  }
+
+  /* Bouche */
+  #bouche {
     position: absolute;
-    bottom: -16px; left: 50%;
+    left: 50%;
+    top: 58%;
     transform: translateX(-50%);
-    width: 80px;
-    display: flex;
-    justify-content: space-between;
+    width: 26%;
+    height: 14%;
+    background: #c1453d;
+    border-radius: 0 0 50% 50% / 0 0 80% 80%;
+    transition: all 0.2s ease;
   }
-  .leg {
-    width: 24px; height: 20px;
-    background: #E85555;
-    border-radius: 0 0 12px 12px;
-    transition: background 0.3s;
-  }
-
-  .tap-counter {
-    position: fixed;
-    top: 20px; right: 20px;
-    z-index: 10;
-    background: rgba(255,255,255,0.85);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    padding: 12px 20px;
-    border-radius: 20px;
-    font-size: 1.1rem;
-    font-weight: 800;
-    color: #444;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-    pointer-events: none;
-  }
-
-  .shape {
-    position: fixed;
-    z-index: 1;
-    pointer-events: none;
-    opacity: 0.15;
-    animation: floatShape 8s ease-in-out infinite;
-  }
-  @keyframes floatShape {
-    0%, 100% { transform: translateY(0) rotate(0deg); }
-    50% { transform: translateY(-30px) rotate(180deg); }
-  }
-
-  .speech-bubble {
+  #bouche::after {
+    content: '';
     position: absolute;
-    top: -60px; left: 50%;
-    transform: translateX(-50%) scale(0);
-    background: white;
-    padding: 8px 16px;
-    border-radius: 20px;
-    font-size: 1.8rem;
-    white-space: nowrap;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-    pointer-events: none;
+    top: 8%;
+    left: 12%;
+    width: 76%;
+    height: 45%;
+    background: #ff8a80;
+    border-radius: 50%;
   }
-  .speech-bubble.show {
+
+  .bouche-grand-sourire #bouche {
+    width: 38%;
+    height: 20%;
+    border-radius: 0 0 50% 50% / 0 0 100% 100%;
+  }
+
+  .bouche-ouverte #bouche {
+    width: 20%;
+    height: 22%;
+    border-radius: 50%;
+  }
+  .bouche-ouverte #bouche::after { display: none; }
+
+  .bouche-o #bouche {
+    width: 14%;
+    height: 14%;
+    border-radius: 50%;
+  }
+  .bouche-o #bouche::after { display: none; }
+
+  /* Chapeau triangulaire */
+  #chapeau {
+    position: absolute;
+    top: -34%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 19% solid transparent;
+    border-right: 19% solid transparent;
+    border-bottom: 42% solid #5b9bd5;
+    filter: drop-shadow(0 6px 8px rgba(0,0,0,0.18));
+    transition: border-bottom-color 0.35s ease;
+  }
+  #chapeau::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 16px;
+    height: 16px;
+    background: #ffd166;
+    border-radius: 50%;
+    box-shadow: 0 0 0 4px rgba(255,209,102,0.35);
+  }
+
+  /* Variante "carré" : chapeau rond façon casquette de robot */
+  .forme-carre #chapeau {
+    width: 38%;
+    height: 30%;
+    border: none;
+    border-radius: 50%;
+    background: #ff8c42;
+    top: -24%;
+  }
+  .forme-carre #chapeau::after {
+    display: none;
+  }
+
+  /* Variante "étoile" : petite pointe lumineuse */
+  .forme-etoile #chapeau {
+    width: 16%;
+    height: 32%;
+    border: none;
+    border-radius: 50% 50% 0 0;
+    background: #ffd166;
+    top: -16%;
+  }
+  .forme-etoile #chapeau::after {
+    display: none;
+  }
+
+  /* Jambes */
+  .jambe {
+    position: absolute;
+    bottom: -6%;
+    width: 14%;
+    height: 16%;
+    background: #ffb347;
+    border-radius: 40% 40% 50% 50%;
+    transition: background 0.35s ease;
+  }
+  .jambe-gauche { left: 26%; }
+  .jambe-droite { right: 26%; }
+
+  /* ===========================================================
+     ACCESSOIRES DE PROGRESSION (paliers)
+     Cachés par défaut, révélés par classes sur #personnage :
+     palier-10, palier-25, palier-50, palier-100 (cumulatives)
+     =========================================================== */
+
+  /* Palier 10 : nœud papillon, sous la bouche */
+  #noeud-papillon {
+    position: absolute;
+    left: 50%;
+    top: 76%;
+    width: 22%;
+    height: 12%;
+    transform: translateX(-50%) scale(0);
+    transform-origin: center;
+    transition: transform 0.5s cubic-bezier(.34,1.56,.64,1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .palier-10 #noeud-papillon {
     transform: translateX(-50%) scale(1);
   }
-  .speech-bubble::after {
+  .aile-noeud {
+    position: absolute;
+    width: 45%;
+    height: 100%;
+    background: #ff5d8f;
+    box-shadow: inset 0 0 0 2px rgba(0,0,0,0.08);
+  }
+  .aile-noeud-gauche {
+    left: 0;
+    clip-path: polygon(100% 50%, 0% 0%, 0% 100%);
+  }
+  .aile-noeud-droite {
+    right: 0;
+    clip-path: polygon(0% 50%, 100% 0%, 100% 100%);
+  }
+  .centre-noeud {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 18%;
+    height: 60%;
+    background: #d6396a;
+    transform: translate(-50%, -50%);
+    border-radius: 2px;
+  }
+
+  /* Palier 25 : lunettes rondes, sur les yeux */
+  #lunettes {
+    position: absolute;
+    top: 30%;
+    left: 50%;
+    width: 78%;
+    height: 22%;
+    transform: translateX(-50%) scale(0);
+    transform-origin: center;
+    transition: transform 0.5s cubic-bezier(.34,1.56,.64,1);
+  }
+  .palier-25 #lunettes {
+    transform: translateX(-50%) scale(1);
+  }
+  .verre {
+    position: absolute;
+    top: 0;
+    width: 38%;
+    height: 100%;
+    border: 4px solid #3a3a4a;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.18);
+  }
+  .verre-gauche { left: 0; }
+  .verre-droite { right: 0; }
+  .pont-lunettes {
+    position: absolute;
+    top: 42%;
+    left: 38%;
+    width: 24%;
+    height: 12%;
+    border-top: 4px solid #3a3a4a;
+  }
+
+  /* Palier 50 : petites ailes dans le dos */
+  #ailes {
+    position: absolute;
+    top: 30%;
+    left: 50%;
+    width: 1px;
+    height: 1px;
+    z-index: -1;
+  }
+  .aile {
+    position: absolute;
+    width: 38px;
+    height: 52px;
+    background: linear-gradient(135deg, #ffffff, #cfe8ff);
+    border: 2px solid rgba(120,170,255,0.6);
+    opacity: 0;
+    transform: scale(0);
+    transition: opacity 0.5s ease, transform 0.5s cubic-bezier(.34,1.56,.64,1);
+  }
+  .palier-50 .aile {
+    opacity: 0.92;
+    transform: scale(1);
+  }
+  .aile-gauche {
+    right: 14px;
+    border-radius: 60% 10% 60% 10%;
+    animation: battementAile 1.4s ease-in-out infinite;
+  }
+  .aile-droite {
+    left: 14px;
+    border-radius: 10% 60% 10% 60%;
+    animation: battementAile 1.4s ease-in-out infinite reverse;
+  }
+  @keyframes battementAile {
+    0%, 100% { transform: scale(1) rotate(-6deg); }
+    50%      { transform: scale(1) rotate(10deg); }
+  }
+
+  /* Palier 100 : couronne + halo scintillant */
+  #couronne {
+    position: absolute;
+    top: -52%;
+    left: 50%;
+    font-size: clamp(1.4rem, 7vw, 2.2rem);
+    transform: translateX(-50%) scale(0) rotate(-15deg);
+    opacity: 0;
+    transition: transform 0.6s cubic-bezier(.34,1.56,.64,1), opacity 0.4s ease;
+  }
+  .palier-100 #couronne {
+    transform: translateX(-50%) scale(1) rotate(0deg);
+    opacity: 1;
+  }
+  #halo {
+    position: absolute;
+    top: 4%;
+    left: 50%;
+    width: 60%;
+    height: 60%;
+    transform: translate(-50%, -50%) scale(0);
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,230,150,0.55), rgba(255,230,150,0) 70%);
+    opacity: 0;
+    transition: transform 0.6s ease, opacity 0.6s ease;
+    pointer-events: none;
+  }
+  .palier-100 #halo {
+    transform: translate(-50%, -50%) scale(1.6);
+    opacity: 1;
+    animation: haloPulse 2.4s ease-in-out infinite;
+  }
+  @keyframes haloPulse {
+    0%, 100% { filter: brightness(1); }
+    50%      { filter: brightness(1.35); }
+  }
+
+  /* ===========================================================
+     BADGE DE DÉBLOCAGE DE PALIER
+     Petite bannière qui apparaît au centre lors d'un déblocage
+     =========================================================== */
+  #badge-palier {
+    position: absolute;
+    top: 22%;
+    left: 50%;
+    transform: translate(-50%, -20px) scale(0.7);
+    z-index: 70;
+    background: rgba(255,255,255,0.95);
+    border-radius: 100px;
+    padding: 0.55em 1.1em;
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+    font-weight: 800;
+    font-size: clamp(0.95rem, 4vw, 1.3rem);
+    color: #ff5d8f;
+    box-shadow: 0 10px 24px rgba(0,0,0,0.2);
+    opacity: 0;
+    pointer-events: none;
+  }
+  #badge-palier-emoji {
+    font-size: 1.3em;
+  }
+  .badge-actif {
+    animation: badgeApparait 2.4s cubic-bezier(.2,.8,.3,1) forwards;
+  }
+  @keyframes badgeApparait {
+    0%   { opacity: 0; transform: translate(-50%, -10px) scale(0.6); }
+    14%  { opacity: 1; transform: translate(-50%, 0) scale(1.08); }
+    22%  { transform: translate(-50%, 0) scale(1); }
+    82%  { opacity: 1; transform: translate(-50%, 0) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -14px) scale(0.9); }
+  }
+
+  /* ===========================================================
+     ANIMATIONS DE RÉACTION DU PERSONNAGE
+     Classes ajoutées temporairement par JS sur #personnage
+     =========================================================== */
+  .anim-saut {
+    animation: animSaut 0.5s cubic-bezier(.36,1.7,.5,1) !important;
+  }
+  @keyframes animSaut {
+    0%   { transform: translateY(0) scale(1,1); }
+    25%  { transform: translateY(8%) scale(1.12,0.85); }
+    55%  { transform: translateY(-32%) scale(0.92,1.12); }
+    80%  { transform: translateY(0) scale(1.08,0.92); }
+    100% { transform: translateY(0) scale(1,1); }
+  }
+
+  .anim-tortille {
+    animation: animTortille 0.5s ease-in-out !important;
+  }
+  @keyframes animTortille {
+    0%, 100% { transform: rotate(0deg); }
+    20%  { transform: rotate(-14deg) scale(1.03); }
+    40%  { transform: rotate(12deg) scale(0.97); }
+    60%  { transform: rotate(-9deg) scale(1.03); }
+    80%  { transform: rotate(6deg) scale(0.98); }
+  }
+
+  .anim-rotation {
+    animation: animRotation 0.55s ease-in-out !important;
+  }
+  @keyframes animRotation {
+    0%   { transform: rotate(0deg) scale(1); }
+    100% { transform: rotate(360deg) scale(1); }
+  }
+
+  .anim-gonfle {
+    animation: animGonfle 0.45s ease-in-out !important;
+  }
+  @keyframes animGonfle {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.35); }
+  }
+
+  /* ===========================================================
+     BULLE DE DIALOGUE
+     =========================================================== */
+  #bulle-dialogue {
+    position: absolute;
+    top: -22%;
+    right: -14%;
+    background: #fff;
+    border-radius: 30px;
+    padding: 0.4em 0.7em;
+    font-size: clamp(1.4rem, 7vw, 2.4rem);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.18);
+    opacity: 0;
+    transform: scale(0.3) translateY(10px);
+    transform-origin: bottom left;
+  }
+  #bulle-dialogue::after {
     content: '';
     position: absolute;
-    bottom: -8px; left: 50%;
-    transform: translateX(-50%);
-    width: 0; height: 0;
-    border-left: 8px solid transparent;
-    border-right: 8px solid transparent;
-    border-top: 10px solid white;
+    bottom: -10px;
+    left: 22px;
+    border-width: 10px 10px 0 0;
+    border-style: solid;
+    border-color: #fff transparent transparent transparent;
+  }
+  .bulle-active {
+    animation: bulleApparait 1.1s ease forwards;
+  }
+  @keyframes bulleApparait {
+    0%   { opacity: 0; transform: scale(0.3) translateY(10px); }
+    18%  { opacity: 1; transform: scale(1.15) translateY(0); }
+    30%  { opacity: 1; transform: scale(1) translateY(0); }
+    80%  { opacity: 1; transform: scale(1) translateY(0); }
+    100% { opacity: 0; transform: scale(0.8) translateY(-10px); }
   }
 
-  .screen-flash {
-    position: fixed;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    z-index: 0;
+  /* ===========================================================
+     EMOJIS VOLANTS (apparaissent au point de contact)
+     =========================================================== */
+  .emoji-volant {
+    position: absolute;
+    z-index: 40;
+    font-size: 2.6rem;
+    pointer-events: none;
+    will-change: transform, opacity;
+  }
+
+  /* ===========================================================
+     ÉCRAN TOURNÉ / PETIT MESSAGE BAS (discret, optionnel)
+     =========================================================== */
+  #astuce-bas {
+    position: absolute;
+    bottom: max(14px, env(safe-area-inset-bottom));
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 60;
+    color: rgba(255,255,255,0.75);
+    font-weight: 700;
+    font-size: 0.85rem;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.2);
     pointer-events: none;
     opacity: 0;
-    transition: opacity 0.1s ease;
+    animation: astuceApparait 1s ease 1s forwards;
   }
-  .screen-flash.active { opacity: 0.25; }
-
-  .hint {
-    position: fixed;
-    bottom: 20px; left: 50%;
-    transform: translateX(-50%);
-    z-index: 10;
-    color: rgba(0,0,0,0.35);
-    font-size: 0.85rem;
-    font-weight: 600;
-    pointer-events: none;
-    animation: hintPulse 2s ease-in-out infinite;
-  }
-  @keyframes hintPulse {
-    0%, 100% { opacity: 0.35; }
-    50% { opacity: 0.6; }
+  @keyframes astuceApparait {
+    to { opacity: 1; }
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after {
-      animation-duration: 0.01ms !important;
-      transition-duration: 0.01ms !important;
-    }
-  }
 </style>
-<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
 </head>
 <body>
 
-<!-- Écran d'accueil -->
-<div id="startScreen">
-  <div class="start-emojis">🌟 🐱 🎈 🌈 🐶</div>
-  <div class="start-char">
-    <div class="se l"><div class="sp"></div></div>
-    <div class="se r"><div class="sp"></div></div>
-    <div class="sc l"></div>
-    <div class="sc r"></div>
-    <div class="sm"></div>
-  </div>
-  <div class="start-title">Tapoui</div>
-  <div class="start-subtitle">Tape partout pour la fete !</div>
-  <button class="start-btn" id="startBtn" aria-label="Commencer à jouer">Jouer !</button>
-</div>
+<div id="app">
 
-<!-- Flash -->
-<div class="screen-flash" id="screenFlash"></div>
+  <!-- =====================================================
+       ÉCRAN D'ACCUEIL : sélection du personnage
+       ===================================================== -->
+  <div id="ecran-accueil">
+    <div id="logo-app">Tapoui</div>
 
-<!-- Canvas particules -->
-<canvas id="particleCanvas"></canvas>
-
-<!-- Emojis -->
-<div class="emoji-layer" id="emojiLayer"></div>
-
-<!-- Formes décoratives -->
-<div class="shape" style="top:10%;left:8%;width:60px;height:60px;border:6px solid #FF6B6B;border-radius:50%;animation-delay:0s;"></div>
-<div class="shape" style="top:20%;right:12%;width:50px;height:50px;background:#51E898;border-radius:8px;animation-delay:2s;"></div>
-<div class="shape" style="bottom:30%;left:15%;width:40px;height:40px;border:5px solid #FFE066;border-radius:12px;animation-delay:4s;transform:rotate(45deg);"></div>
-<div class="shape" style="top:60%;right:8%;width:70px;height:70px;border:6px solid #56E0D0;border-radius:50%;animation-delay:1s;"></div>
-<div class="shape" style="bottom:15%;right:25%;width:45px;height:45px;background:#FF85A1;border-radius:50%;animation-delay:3s;"></div>
-<div class="shape" style="top:40%;left:5%;width:35px;height:35px;background:#FFE066;border-radius:6px;animation-delay:5s;"></div>
-
-<!-- Compteur -->
-<div class="tap-counter" id="tapCounter">0 coup !</div>
-
-<!-- Personnage -->
-<div class="character-container" id="characterContainer">
-  <div class="character" id="character">
-    <div class="speech-bubble" id="speechBubble"></div>
-    <div class="hat" id="hat"></div>
-    <div class="body" id="charBody">
-      <div class="eye left" id="eyeLeft"><div class="pupil"><div class="shine"></div></div></div>
-      <div class="eye right" id="eyeRight"><div class="pupil"><div class="shine"></div></div></div>
-      <div class="cheek left"></div>
-      <div class="cheek right"></div>
-      <div class="mouth smile" id="mouth"></div>
+    <div id="bloc-scores" class="cache">
+      <div class="score-item">
+        <span class="score-emoji">🏆</span>
+        <span class="score-valeur" id="record-valeur">0</span>
+        <span class="score-label">record</span>
+      </div>
+      <div class="score-item">
+        <span class="score-emoji">✨</span>
+        <span class="score-valeur" id="total-valeur">0</span>
+        <span class="score-label">au total</span>
+      </div>
     </div>
-    <div class="legs">
-      <div class="leg" id="legLeft"></div>
-      <div class="leg" id="legRight"></div>
-    </div>
-  </div>
-</div>
 
-<!-- Indice -->
-<div class="hint" id="hint">Tape n'importe ou !</div>
+    <div id="titre-accueil">Choisis ton ami !</div>
+
+    <div id="grille-personnages">
+      <button class="carte-personnage" type="button" data-personnage="rond">
+        <div class="mini-personnage mini-rond">
+          <div class="mini-chapeau mini-chapeau-triangle"></div>
+          <div class="mini-corps mini-corps-rond">
+            <div class="mini-oeil mini-oeil-gauche"></div>
+            <div class="mini-oeil mini-oeil-droite"></div>
+          </div>
+        </div>
+      </button>
+
+      <button class="carte-personnage" type="button" data-personnage="carre">
+        <div class="mini-personnage mini-carre">
+          <div class="mini-chapeau mini-chapeau-rond"></div>
+          <div class="mini-corps mini-corps-carre">
+            <div class="mini-oeil mini-oeil-gauche"></div>
+            <div class="mini-oeil mini-oeil-droite"></div>
+          </div>
+        </div>
+      </button>
+
+      <button class="carte-personnage" type="button" data-personnage="etoile">
+        <div class="mini-personnage mini-etoile">
+          <div class="mini-chapeau mini-chapeau-pointe"></div>
+          <div class="mini-corps mini-corps-etoile">
+            <div class="mini-oeil mini-oeil-gauche"></div>
+            <div class="mini-oeil mini-oeil-droite"></div>
+          </div>
+        </div>
+      </button>
+    </div>
+
+    <button id="bouton-jouer" type="button" disabled>Jouer ! 🎉</button>
+  </div>
+
+  <!-- =====================================================
+       SCÈNE DE JEU (cachée au départ)
+       ===================================================== -->
+  <div id="scene" class="cache">
+
+    <canvas id="canvas-particules"></canvas>
+
+    <div id="formes-flottantes"></div>
+
+    <div id="flash"></div>
+
+    <div id="compteur">
+      <span>✨</span><span id="compteur-valeur">0</span>
+    </div>
+
+    <div id="zone-personnage">
+      <div id="personnage">
+        <div id="chapeau"></div>
+        <div id="halo"></div>
+        <div id="couronne">👑</div>
+        <div id="ailes">
+          <div class="aile aile-gauche"></div>
+          <div class="aile aile-droite"></div>
+        </div>
+        <div id="corps">
+          <div class="joue joue-gauche"></div>
+          <div class="joue joue-droite"></div>
+          <div class="oeil oeil-gauche"><div class="pupille"></div></div>
+          <div class="oeil oeil-droite"><div class="pupille"></div></div>
+          <div id="bouche"></div>
+          <div id="lunettes">
+            <div class="verre verre-gauche"></div>
+            <div class="verre verre-droite"></div>
+            <div class="pont-lunettes"></div>
+          </div>
+          <div id="noeud-papillon">
+            <div class="aile-noeud aile-noeud-gauche"></div>
+            <div class="aile-noeud aile-noeud-droite"></div>
+            <div class="centre-noeud"></div>
+          </div>
+        </div>
+        <div class="jambe jambe-gauche"></div>
+        <div class="jambe jambe-droite"></div>
+        <div id="bulle-dialogue"></div>
+      </div>
+    </div>
+
+    <div id="badge-palier">
+      <span id="badge-palier-emoji">🎀</span>
+      <span id="badge-palier-texte">Nouveau look débloqué !</span>
+    </div>
+
+    <div id="astuce-bas">Touche les formes qui montent !</div>
+
+  </div>
+
+</div>
 
 <script>
-  // ============================
-  // Données
-  // ============================
-  const EMOJIS = [
-    '🌟','⭐','🌈','🎈','🎉','🎊','🎁','❤️','💖','💕',
-    '🌻','🌺','🌸','🍀','🍎','🍊','🍋','🍇','🍓','🍉',
-    '🐱','🐶','🐻','🐰','🦊','🐸','🐝','🦋','🐢','🐙',
-    '🚀','✈️','🚗','🎈','🎸','🎺','🥁','🎵','🎶','🔔',
-    '👶','🍼','🧸','🪀','🎯','🏆','👑','💎','🧲','🔮',
-    '🦄','🐉','🦁','🐯','🐮','🐷','🐵','🐝','🐛','🐠',
-    '🍕','🧁','🍩','🍪','🍫','🍦','🧀','🥕','🌽','🥐'
-  ];
+/* =================================================================
+   APPLICATION "PETIT MONSTRE MAGIQUE"
+   Frappe aléatoire gratifiante pour très jeunes enfants.
+   Tout le code est en un seul fichier, commenté en français.
+   ================================================================= */
 
-  const BG_COLORS = [
-    ['#FFE066','#FFAD42'],['#FF9A76','#FF6B6B'],['#A8E6CF','#56E0D0'],
-    ['#FFD3E0','#FF85A1'],['#D4FC79','#96E6A1'],['#FFEAA7','#FDCB6E'],
-    ['#C3FAE8','#63E6BE'],['#FFC9C9','#FF8585'],['#B5EAD7','#7DCEA0'],
-    ['#FFECD2','#FCB69F'],
-  ];
+(function () {
+  'use strict';
 
-  const CHAR_COLORS = ['#FF6B6B','#51E898','#56E0D0','#FFE066','#FF85A1','#FF9A76','#A8E6CF','#FDCB6E'];
-  const HAT_COLORS = ['#51E898','#56E0D0','#FFE066','#FF85A1','#FF9A76','#FF6B6B','#A8E6CF','#FDCB6E'];
-  const CHAR_ANIMS = ['bounce','wiggle','spin','grow'];
-  const EYE_STATES = ['normal','happy','surprised','love'];
-  const MOUTH_STATES = ['smile','open','big-smile','o'];
-  const SPEECHES = ['😄','😆','🥰','😮','🎉','✨','🌟','💪','🤩','👏','🎊','❤️','🦄','🌈','🎵'];
+  // ---------------------------------------------------------------
+  // RÉFÉRENCES DOM
+  // ---------------------------------------------------------------
+  const ecranAccueil   = document.getElementById('ecran-accueil');
+  const boutonJouer    = document.getElementById('bouton-jouer');
+  const scene          = document.getElementById('scene');
+  const canvas         = document.getElementById('canvas-particules');
+  const ctx            = canvas.getContext('2d');
+  const formesContainer= document.getElementById('formes-flottantes');
+  const flashEl        = document.getElementById('flash');
+  const compteurValeur = document.getElementById('compteur-valeur');
+  const compteurEl     = document.getElementById('compteur');
+  const personnage     = document.getElementById('personnage');
+  const corps          = document.getElementById('corps');
+  const chapeau        = document.getElementById('chapeau');
+  const bulleDialogue  = document.getElementById('bulle-dialogue');
+  const jambeGauche    = document.querySelector('.jambe-gauche');
+  const jambeDroite    = document.querySelector('.jambe-droite');
+  const badgePalier    = document.getElementById('badge-palier');
+  const badgePalierEmoji = document.getElementById('badge-palier-emoji');
+  const badgePalierTexte = document.getElementById('badge-palier-texte');
+  const cartesPersonnage = document.querySelectorAll('.carte-personnage');
+  const blocScores     = document.getElementById('bloc-scores');
+  const recordValeurEl = document.getElementById('record-valeur');
+  const totalValeurEl  = document.getElementById('total-valeur');
 
-  let tapCount = 0;
+  // ---------------------------------------------------------------
+  // STOCKAGE LOCAL DU SCORE
+  // Conserve le meilleur score (record d'une seule session) et le
+  // total cumulé de blocs éclatés depuis toujours, via localStorage.
+  // Aucune donnée n'est envoyée ailleurs, tout reste sur l'appareil.
+  // ---------------------------------------------------------------
+  const CLE_RECORD = 'tapoui_record';
+  const CLE_TOTAL  = 'tapoui_total';
+
+  function lireScoreSauvegarde() {
+    let record = 0;
+    let total = 0;
+    try {
+      record = parseInt(localStorage.getItem(CLE_RECORD), 10) || 0;
+      total = parseInt(localStorage.getItem(CLE_TOTAL), 10) || 0;
+    } catch (e) {
+      // localStorage indisponible (mode privé strict, etc.) : on continue
+      // sans sauvegarde plutôt que de casser le jeu.
+    }
+    return { record, total };
+  }
+
+  function sauvegarderScore(record, total) {
+    try {
+      localStorage.setItem(CLE_RECORD, String(record));
+      localStorage.setItem(CLE_TOTAL, String(total));
+    } catch (e) {
+      // Échec silencieux : le jeu continue de fonctionner sans persistance.
+    }
+  }
+
+  // Affiche le bloc record/total sur l'écran d'accueil s'il y a déjà
+  // un score sauvegardé (masqué tant qu'aucune partie n'a été jouée).
+  function afficherScoreAccueil() {
+    const { record, total } = lireScoreSauvegarde();
+    if (total > 0) {
+      recordValeurEl.textContent = record;
+      totalValeurEl.textContent = total;
+      blocScores.classList.remove('cache');
+    }
+  }
+
+  // ---------------------------------------------------------------
+  // ÉTAT GLOBAL
+  // ---------------------------------------------------------------
+  let nbCoups = 0;
   let audioCtx = null;
-  let gameStarted = false;
+  let animTimeoutId = null;
+  let bulleTimeoutId = null;
+  let badgeTimeoutId = null;
+  let dernierPalierAtteint = 0; // index dans PALIERS (0 à 4), remis à 0 à chaque nouveau décor
+  let indexDecorActuel = 0;     // index dans DECORS, avance à chaque cycle de 4 paliers complété
+  let coupsDansCycle = 0;       // coups depuis le début du décor courant, remis à 0 à chaque cycle
+  let formePersonnageChoisie = 'rond'; // 'rond' | 'carre' | 'etoile', fixé à la sélection initiale
+  let totalAvantSession = 0; // total cumulé déjà sauvegardé avant cette partie
+  let recordAvantSession = 0; // meilleur score déjà sauvegardé avant cette partie
 
-  // DOM
-  const canvas = document.getElementById('particleCanvas');
-  const ctx = canvas.getContext('2d');
-  const emojiLayer = document.getElementById('emojiLayer');
-  const character = document.getElementById('character');
-  const charBody = document.getElementById('charBody');
-  const eyeLeft = document.getElementById('eyeLeft');
-  const eyeRight = document.getElementById('eyeRight');
-  const mouth = document.getElementById('mouth');
-  const hat = document.getElementById('hat');
-  const legLeft = document.getElementById('legLeft');
-  const legRight = document.getElementById('legRight');
-  const speechBubble = document.getElementById('speechBubble');
-  const screenFlash = document.getElementById('screenFlash');
-  const tapCounter = document.getElementById('tapCounter');
-  const hint = document.getElementById('hint');
-  const startScreen = document.getElementById('startScreen');
-  const startBtn = document.getElementById('startBtn');
+  // Palette de couleurs vives et douces pour le corps / chapeau
+  const PALETTE_CORPS = ['#ffb347', '#ff8fa3', '#7ed6a5', '#7aa7ff', '#c084fc', '#ffd166', '#4ecdc4', '#ff6b9d'];
+  const PALETTE_CHAPEAU = ['#5b9bd5', '#ff6b6b', '#6bcB77', '#f7b733', '#a66bff', '#ff8c42', '#3dd9c4', '#ff4d8d'];
 
-  // ============================
-  // ÉCRAN D'ACCUEIL — débloque l'audio
-  // ============================
-
-  function startGame() {
-    if (gameStarted) return;
-    gameStarted = true;
-
-    // Créer l'AudioContext SYNCHRONEMENT dans le handler tactile
-    try {
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      // Forcer le resume synchrone aussi
-      if (audioCtx.state === 'suspended') {
-        audioCtx.resume();
-      }
-    } catch(e) {
-      console.warn('AudioContext non disponible', e);
+  // 4 décors thématiques. Chacun contient plusieurs variations de
+  // dégradé (utilisées toutes les 3 interactions pour garder du
+  // mouvement) ; le décor change entièrement au passage au cycle
+  // de paliers suivant (cf. PALIERS / cycle de décor plus bas).
+  const DECORS = [
+    { // Décor 1 : Jour pastel
+      nom: 'Jour pastel',
+      variations: [
+        'linear-gradient(160deg, #a8edea, #fed6e3)',
+        'linear-gradient(160deg, #ffecd2, #fcb69f)',
+        'linear-gradient(160deg, #fddb92, #d1fdff)'
+      ]
+    },
+    { // Décor 2 : Forêt enchantée
+      nom: 'Forêt enchantée',
+      variations: [
+        'linear-gradient(160deg, #d4fc79, #96e6a1)',
+        'linear-gradient(160deg, #84fab0, #8fd3f4)',
+        'linear-gradient(160deg, #c2e59c, #64b3f4)'
+      ]
+    },
+    { // Décor 3 : Crépuscule
+      nom: 'Crépuscule',
+      variations: [
+        'linear-gradient(160deg, #fbc2eb, #a6c1ee)',
+        'linear-gradient(160deg, #f6d365, #fda085)',
+        'linear-gradient(160deg, #ff9a9e, #fecfef)'
+      ]
+    },
+    { // Décor 4 : Nuit étoilée
+      nom: 'Nuit étoilée',
+      variations: [
+        'linear-gradient(160deg, #667eea, #764ba2)',
+        'linear-gradient(160deg, #2c3e70, #5b6abf)',
+        'linear-gradient(160deg, #3a3a6e, #8e7cc3)'
+      ]
     }
+  ];
 
-    // Jouer un son de démarrage pour confirmer que ça marche
-    playStartSound();
+  // Emojis géants utilisés pour les envolées
+  const EMOJIS_VOLANTS = [
+    '🐶','🐱','🐰','🐻','🦊','🐼','🐨','🐸','🐥','🦋',
+    '🍓','🍉','🍌','🍪','🍦','🧁','🍭','🍩',
+    '⭐','🌈','🎈','🎁','🌸','☁️','🪀','🧸','🚗','🚀'
+  ];
 
-    // Cacher l'écran d'accueil
-    startScreen.classList.add('hidden');
-    setTimeout(() => { startScreen.style.display = 'none'; }, 600);
+  // Emojis pour la bulle de dialogue du personnage
+  const EMOJIS_BULLE = ['😄','🎉','💖','✨','😍','🤩','🥳','👏','🌟','😊'];
+
+  // Types d'animation possibles pour le personnage
+  const ANIMATIONS = ['anim-saut', 'anim-tortille', 'anim-rotation', 'anim-gonfle'];
+
+  // États possibles des yeux et de la bouche
+  const ETATS_YEUX = ['', 'yeux-heureux', 'yeux-surpris', 'yeux-amoureux'];
+  const ETATS_BOUCHE = ['', 'bouche-grand-sourire', 'bouche-ouverte', 'bouche-o'];
+
+  // Paliers de progression du personnage : à chaque seuil de blocs
+  // éclatés, un accessoire permanent (pour la session) est débloqué.
+  // Cumulatifs : la classe CSS reste, le nouvel accessoire s'ajoute.
+  const PALIERS = [
+    { seuil: 10,  classe: 'palier-10',  emoji: '🎀', texte: 'Nouveau look : noeud papillon !' },
+    { seuil: 25,  classe: 'palier-25',  emoji: '🕶️', texte: 'Nouveau look : lunettes !' },
+    { seuil: 50,  classe: 'palier-50',  emoji: '🦋', texte: 'Nouveau look : des ailes !' },
+    { seuil: 100, classe: 'palier-100', emoji: '👑', texte: 'Nouveau look : couronne royale !' }
+  ];
+
+  // Formes géométriques pour les blocs-cibles flottants
+  const FORMES_SVG = ['cercle', 'carre', 'triangle', 'etoile'];
+
+  // Couleurs des blocs-cibles (reprend la palette générale)
+  const COULEURS_BLOCS = PALETTE_CORPS.concat(PALETTE_CHAPEAU);
+
+  // ---------------------------------------------------------------
+  // UTILITAIRE : nombre aléatoire
+  // ---------------------------------------------------------------
+  function alea(min, max) {
+    return Math.random() * (max - min) + min;
+  }
+  function aleaInt(min, max) {
+    return Math.floor(alea(min, max + 1));
+  }
+  function choix(tableau) {
+    return tableau[aleaInt(0, tableau.length - 1)];
   }
 
-  function playStartSound() {
-    if (!audioCtx) return;
-    const now = audioCtx.currentTime;
-    // Petite mélodie d'accueil : 3 notes montantes joyeuses
-    [523, 659, 784].forEach((freq, i) => {
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(freq, now + i * 0.12);
-      gain.gain.setValueAtTime(0.25, now + i * 0.12);
-      gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.12 + 0.3);
-      osc.connect(gain).connect(audioCtx.destination);
-      osc.start(now + i * 0.12);
-      osc.stop(now + i * 0.12 + 0.3);
-    });
-  }
-
-  // Écouter le bouton — le plus fiable sur mobile
-  startBtn.addEventListener('click', startGame, { once: false });
-  startBtn.addEventListener('touchend', (e) => {
-    e.preventDefault(); // Évite le double déclenchement click+touch
-    startGame();
-  }, { once: false });
-
-  // ============================
-  // Sons
-  // ============================
-
-  function playFunSound() {
-    if (!audioCtx) return;
-    // Vérifier que le contexte est bien actif (sécurité mobile)
-    if (audioCtx.state === 'suspended') {
-      audioCtx.resume();
-    }
-
-    const type = Math.floor(Math.random() * 6);
-    const now = audioCtx.currentTime;
-
-    try {
-      if (type === 0) {
-        // "Boing" montante
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(300, now);
-        osc.frequency.exponentialRampToValueAtTime(900, now + 0.15);
-        gain.gain.setValueAtTime(0.3, now);
-        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
-        osc.connect(gain).connect(audioCtx.destination);
-        osc.start(now); osc.stop(now + 0.3);
-      } else if (type === 1) {
-        // "Ding" cristallin
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(1200, now);
-        gain.gain.setValueAtTime(0.25, now);
-        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
-        osc.connect(gain).connect(audioCtx.destination);
-        osc.start(now); osc.stop(now + 0.5);
-      } else if (type === 2) {
-        // Gamme montante rapide
-        [400, 500, 650].forEach((freq, i) => {
-          const osc = audioCtx.createOscillator();
-          const gain = audioCtx.createGain();
-          osc.type = 'square';
-          osc.frequency.setValueAtTime(freq, now + i * 0.08);
-          gain.gain.setValueAtTime(0.12, now + i * 0.08);
-          gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.08 + 0.15);
-          osc.connect(gain).connect(audioCtx.destination);
-          osc.start(now + i * 0.08); osc.stop(now + i * 0.08 + 0.15);
-        });
-      } else if (type === 3) {
-        // "Pop" bulle
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(600, now);
-        osc.frequency.exponentialRampToValueAtTime(200, now + 0.1);
-        gain.gain.setValueAtTime(0.35, now);
-        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
-        osc.connect(gain).connect(audioCtx.destination);
-        osc.start(now); osc.stop(now + 0.12);
-      } else if (type === 4) {
-        // Note aiguë mignonne
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(880, now);
-        osc.frequency.setValueAtTime(1100, now + 0.1);
-        gain.gain.setValueAtTime(0.2, now);
-        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
-        osc.connect(gain).connect(audioCtx.destination);
-        osc.start(now); osc.stop(now + 0.4);
-      } else {
-        // "Wobble" drôle
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(200, now);
-        osc.frequency.linearRampToValueAtTime(500, now + 0.1);
-        osc.frequency.linearRampToValueAtTime(150, now + 0.25);
-        gain.gain.setValueAtTime(0.1, now);
-        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
-        osc.connect(gain).connect(audioCtx.destination);
-        osc.start(now); osc.stop(now + 0.3);
-      }
-    } catch(e) {
-      // Silencieux en cas d'erreur audio
-    }
-  }
-
-  // ============================
-  // Particules
-  // ============================
-  let particles = [];
-
-  function resizeCanvas() {
+  // ---------------------------------------------------------------
+  // CANVAS PLEIN ÉCRAN : dimensionnement
+  // ---------------------------------------------------------------
+  function redimensionnerCanvas() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
   }
-  resizeCanvas();
-  window.addEventListener('resize', resizeCanvas);
+  window.addEventListener('resize', redimensionnerCanvas);
+  redimensionnerCanvas();
 
-  class Particle {
-    constructor(x, y, color) {
-      this.x = x; this.y = y; this.color = color;
-      this.size = Math.random() * 10 + 4;
-      const angle = Math.random() * Math.PI * 2;
-      const speed = Math.random() * 8 + 3;
-      this.vx = Math.cos(angle) * speed;
-      this.vy = Math.sin(angle) * speed - 3;
-      this.gravity = 0.15;
-      this.life = 1;
-      this.decay = Math.random() * 0.02 + 0.015;
-      this.shape = Math.floor(Math.random() * 3);
-      this.rotation = Math.random() * Math.PI * 2;
-      this.rotSpeed = (Math.random() - 0.5) * 0.2;
-    }
-    update() {
-      this.x += this.vx; this.y += this.vy;
-      this.vy += this.gravity; this.vx *= 0.99;
-      this.life -= this.decay; this.rotation += this.rotSpeed;
-    }
-    draw(ctx) {
-      ctx.save();
-      ctx.globalAlpha = Math.max(0, this.life);
-      ctx.translate(this.x, this.y);
-      ctx.rotate(this.rotation);
-      ctx.fillStyle = this.color;
-      const s = this.size * this.life;
-      if (this.shape === 0) {
-        ctx.beginPath();
-        ctx.arc(0, 0, Math.max(0.5, s), 0, Math.PI * 2);
-        ctx.fill();
-      } else if (this.shape === 1) {
-        ctx.fillRect(-s, -s, s * 2, s * 2);
-      } else {
-        drawStar(ctx, 0, 0, 5, Math.max(0.5, s), Math.max(0.3, s * 0.5));
-        ctx.fill();
-      }
-      ctx.restore();
-    }
-  }
+  // ---------------------------------------------------------------
+  // SYSTÈME DE PARTICULES (canvas)
+  // ---------------------------------------------------------------
+  let particules = [];
 
-  function drawStar(ctx, cx, cy, spikes, outerR, innerR) {
-    let rot = Math.PI / 2 * 3;
-    const step = Math.PI / spikes;
-    ctx.beginPath();
-    ctx.moveTo(cx, cy - outerR);
-    for (let i = 0; i < spikes; i++) {
-      ctx.lineTo(cx + Math.cos(rot) * outerR, cy + Math.sin(rot) * outerR);
-      rot += step;
-      ctx.lineTo(cx + Math.cos(rot) * innerR, cy + Math.sin(rot) * innerR);
-      rot += step;
-    }
-    ctx.closePath();
-  }
-
-  function spawnParticles(x, y, count) {
-    const colors = ['#FF6B6B','#51E898','#FFE066','#56E0D0','#FF85A1','#FF9A76','#FDCB6E','#A8E6CF','#FF4466','#FFD700'];
-    for (let i = 0; i < count; i++) {
-      particles.push(new Particle(x, y, colors[Math.floor(Math.random() * colors.length)]));
-    }
-  }
-
-  function animateParticles() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    particles = particles.filter(p => p.life > 0);
-    particles.forEach(p => { p.update(); p.draw(ctx); });
-    requestAnimationFrame(animateParticles);
-  }
-  animateParticles();
-
-  // ============================
-  // Emojis
-  // ============================
-  function spawnEmoji(x, y) {
-    const emoji = document.createElement('div');
-    emoji.className = 'emoji-pop';
-    emoji.textContent = EMOJIS[Math.floor(Math.random() * EMOJIS.length)];
-    const offsetX = (Math.random() - 0.5) * 200;
-    const offsetY = (Math.random() - 0.5) * 150;
-    emoji.style.left = Math.max(20, Math.min(window.innerWidth - 80, x + offsetX)) + 'px';
-    emoji.style.top = Math.max(20, Math.min(window.innerHeight - 80, y + offsetY)) + 'px';
-    emoji.style.fontSize = (Math.random() * 3 + 2.5) + 'rem';
-    emojiLayer.appendChild(emoji);
-    emoji.addEventListener('animationend', () => emoji.remove());
-  }
-
-  // ============================
-  // Fond
-  // ============================
-  function changeBackground() {
-    const pair = BG_COLORS[Math.floor(Math.random() * BG_COLORS.length)];
-    document.body.style.background = `linear-gradient(135deg, ${pair[0]}, ${pair[1]})`;
-  }
-
-  // ============================
-  // Flash
-  // ============================
-  function flashScreen() {
-    const flashColors = ['#FFE066','#FF6B6B','#51E898','#56E0D0','#FF85A1','#fff'];
-    screenFlash.style.background = flashColors[Math.floor(Math.random() * flashColors.length)];
-    screenFlash.classList.add('active');
-    setTimeout(() => screenFlash.classList.remove('active'), 120);
-  }
-
-  // ============================
-  // Personnage
-  // ============================
-  let hatStyleEl = null;
-  function updateHatAfter(color) {
-    if (!hatStyleEl) { hatStyleEl = document.createElement('style'); document.head.appendChild(hatStyleEl); }
-    hatStyleEl.textContent = `.hat::after { background: ${color} !important; }`;
-  }
-
-  function reactCharacter() {
-    const bodyColor = CHAR_COLORS[Math.floor(Math.random() * CHAR_COLORS.length)];
-    charBody.style.background = bodyColor;
-
-    const hatColor = HAT_COLORS[Math.floor(Math.random() * HAT_COLORS.length)];
-    hat.style.borderBottomColor = hatColor;
-    updateHatAfter(hatColor);
-
-    legLeft.style.background = bodyColor;
-    legRight.style.background = bodyColor;
-
-    const anim = CHAR_ANIMS[Math.floor(Math.random() * CHAR_ANIMS.length)];
-    character.classList.remove('bounce','wiggle','spin','grow');
-    void character.offsetWidth;
-    character.classList.add(anim);
-
-    const eyeState = EYE_STATES[Math.floor(Math.random() * EYE_STATES.length)];
-    eyeLeft.className = 'eye left ' + eyeState;
-    eyeRight.className = 'eye right ' + eyeState;
-    if (eyeState === 'normal') {
-      eyeLeft.innerHTML = '<div class="pupil"><div class="shine"></div></div>';
-      eyeRight.innerHTML = '<div class="pupil"><div class="shine"></div></div>';
-    } else {
-      eyeLeft.innerHTML = '';
-      eyeRight.innerHTML = '';
-    }
-
-    const mouthState = MOUTH_STATES[Math.floor(Math.random() * MOUTH_STATES.length)];
-    mouth.className = 'mouth ' + mouthState;
-
-    if (Math.random() < 0.7) {
-      speechBubble.textContent = SPEECHES[Math.floor(Math.random() * SPEECHES.length)];
-      speechBubble.classList.add('show');
-      setTimeout(() => speechBubble.classList.remove('show'), 800);
-    }
-
-    if (eyeState === 'normal') {
-      document.querySelectorAll('.pupil').forEach(p => {
-        const dx = (Math.random() - 0.5) * 8;
-        const dy = (Math.random() - 0.5) * 4;
-        p.style.transform = `translateX(calc(-50% + ${dx}px)) translateY(${dy}px)`;
+  function creerExplosionParticules(x, y) {
+    const nb = aleaInt(14, 22);
+    const couleurs = PALETTE_CORPS.concat(PALETTE_CHAPEAU);
+    for (let i = 0; i < nb; i++) {
+      const angle = alea(0, Math.PI * 2);
+      const vitesse = alea(2, 9);
+      particules.push({
+        x: x,
+        y: y,
+        vx: Math.cos(angle) * vitesse,
+        vy: Math.sin(angle) * vitesse,
+        taille: alea(5, 13),
+        couleur: choix(couleurs),
+        forme: choix(['cercle', 'carre', 'etoile']),
+        rotation: alea(0, Math.PI * 2),
+        vitesseRotation: alea(-0.2, 0.2),
+        vie: 1,
+        decroissance: alea(0.012, 0.028),
+        gravite: alea(0.08, 0.18)
       });
     }
   }
 
-  character.addEventListener('animationend', () => {
-    character.classList.remove('bounce','wiggle','spin','grow');
-    character.style.transform = 'scale(1)';
-  });
+  function dessinerEtoile(cx, cy, taille, rotation, couleur) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(rotation);
+    ctx.fillStyle = couleur;
+    ctx.beginPath();
+    for (let i = 0; i < 5; i++) {
+      const angleExt = (i * 2 * Math.PI / 5) - Math.PI / 2;
+      const angleInt = angleExt + Math.PI / 5;
+      const xExt = Math.cos(angleExt) * taille;
+      const yExt = Math.sin(angleExt) * taille;
+      const xInt = Math.cos(angleInt) * (taille * 0.45);
+      const yInt = Math.sin(angleInt) * (taille * 0.45);
+      if (i === 0) ctx.moveTo(xExt, yExt); else ctx.lineTo(xExt, yExt);
+      ctx.lineTo(xInt, yInt);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
 
-  // ============================
-  // Action principale
-  // ============================
-  function onTap(x, y) {
-    if (!gameStarted) return;
+  function majParticules() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    particules = particules.filter(p => p.vie > 0);
 
-    if (tapCount === 0) hint.style.display = 'none';
-    tapCount++;
-    tapCounter.textContent = tapCount + ' coup' + (tapCount > 1 ? 's' : '') + ' !';
+    for (const p of particules) {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += p.gravite;
+      p.vx *= 0.985;
+      p.rotation += p.vitesseRotation;
+      p.vie -= p.decroissance;
 
-    playFunSound();
-    spawnParticles(x, y, 15 + Math.floor(Math.random() * 10));
+      ctx.globalAlpha = Math.max(p.vie, 0);
 
-    const emojiCount = Math.floor(Math.random() * 3) + 2;
-    for (let i = 0; i < emojiCount; i++) {
-      setTimeout(() => spawnEmoji(x, y), i * 80);
+      if (p.forme === 'cercle') {
+        ctx.fillStyle = p.couleur;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.taille / 2, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (p.forme === 'carre') {
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rotation);
+        ctx.fillStyle = p.couleur;
+        ctx.fillRect(-p.taille / 2, -p.taille / 2, p.taille, p.taille);
+        ctx.restore();
+      } else {
+        dessinerEtoile(p.x, p.y, p.taille / 1.6, p.rotation, p.couleur);
+      }
+    }
+    ctx.globalAlpha = 1;
+
+    requestAnimationFrame(majParticules);
+  }
+
+  // ---------------------------------------------------------------
+  // BLOCS-CIBLES FLOTTANTS (remplacent les formes décoratives)
+  // Montent depuis le bas, éclatables au tap, accélèrent avec le score
+  // ---------------------------------------------------------------
+  let intervalSpawnId = null;
+  let blocsActifs = new Set(); // évite qu'un même bloc soit éclaté deux fois
+
+  // Cadence de spawn : commence calme, accélère doucement avec le score,
+  // sans jamais devenir frénétique (plancher de sécurité).
+  function delaiSpawnActuel() {
+    const base = 1500;           // ms entre deux blocs au démarrage
+    const plancher = 650;        // ms minimum, jamais plus rapide que ça
+    const reduction = nbCoups * 12; // l'écran s'accélère doucement avec le score
+    return Math.max(plancher, base - reduction);
+  }
+
+  function dureeMonteeActuelle() {
+    // Le bloc met aussi un peu moins de temps à traverser l'écran
+    // quand le score augmente, pour rester cohérent avec la cadence.
+    const base = 6000;
+    const plancher = 3200;
+    const reduction = nbCoups * 25;
+    return Math.max(plancher, base - reduction);
+  }
+
+  function creerBlocCible() {
+    const bloc = document.createElement('div');
+    bloc.className = 'bloc-cible';
+
+    const taille = aleaInt(54, 92);
+    const type = choix(FORMES_SVG);
+    const couleur = choix(COULEURS_BLOCS);
+    const gauche = alea(4, 90); // en vw, marge pour ne pas sortir de l'écran
+    const duree = dureeMonteeActuelle();
+    const derive = aleaInt(-60, 60); // léger zigzag horizontal sur la montée
+    const rotationTotale = choix([260, 320, 380, 420]);
+
+    bloc.style.left = gauche + 'vw';
+    bloc.style.width = taille + 'px';
+    bloc.style.height = taille + 'px';
+    bloc.style.animationDuration = duree + 'ms';
+    bloc.style.setProperty('--derive', derive + 'px');
+    bloc.style.setProperty('--rotation-totale', rotationTotale + 'deg');
+
+    // Élément intérieur pour le tortillement, séparé de la trajectoire
+    const interieur = document.createElement('div');
+    interieur.className = 'bloc-cible-interieur';
+
+    if (type === 'cercle') {
+      interieur.style.borderRadius = '50%';
+      interieur.style.background = couleur;
+    } else if (type === 'carre') {
+      interieur.style.borderRadius = '22%';
+      interieur.style.background = couleur;
+    } else if (type === 'triangle') {
+      interieur.style.width = '0';
+      interieur.style.height = '0';
+      interieur.style.borderLeft = (taille / 2) + 'px solid transparent';
+      interieur.style.borderRight = (taille / 2) + 'px solid transparent';
+      interieur.style.borderBottom = taille + 'px solid ' + couleur;
+    } else { // étoile en CSS clip-path
+      interieur.style.background = couleur;
+      interieur.style.clipPath = 'polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)';
     }
 
-    flashScreen();
-    if (tapCount % 3 === 0) changeBackground();
-    reactCharacter();
+    bloc.appendChild(interieur);
+    formesContainer.appendChild(bloc);
+    blocsActifs.add(bloc);
 
-    if (Math.random() < 0.3) {
-      const rect = character.getBoundingClientRect();
-      spawnParticles(rect.left + rect.width / 2, rect.top + rect.height / 2, 30);
+    // Le bloc qui sort par le haut sans avoir été touché : fondu doux,
+    // aucune pénalité de score, retrait propre du DOM.
+    bloc.addEventListener('animationend', function (e) {
+      if (e.target !== bloc) return; // ignore les animations de l'intérieur
+      if (!blocsActifs.has(bloc)) return; // déjà éclaté, géré ailleurs
+      blocsActifs.delete(bloc);
+      bloc.classList.add('bloc-rate');
+      setTimeout(() => bloc.remove(), 520);
+    });
+
+    // Tap/clic sur le bloc : éclatement en emojis + son + particules
+    function gererTapBloc(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!blocsActifs.has(bloc)) return; // déjà éclaté
+      blocsActifs.delete(bloc);
+
+      const rect = bloc.getBoundingClientRect();
+      const x = rect.left + rect.width / 2;
+      const y = rect.top + rect.height / 2;
+
+      bloc.classList.add('bloc-eclate');
+      setTimeout(() => bloc.remove(), 340);
+
+      eclaterBloc(x, y);
+    }
+
+    bloc.addEventListener('pointerdown', gererTapBloc);
+  }
+
+  // Réaction complète quand un bloc est éclaté : emojis multiples,
+  // particules, son, petite réaction du personnage, score.
+  function eclaterBloc(x, y) {
+    incrementerCompteur();
+    changerFondSiNecessaire();
+    verifierPalier();
+
+    creerEmojisVolants(x, y);
+    creerExplosionParticules(x, y);
+    declencherFlash();
+    jouerSonAleatoire();
+
+    // Le personnage réagit aussi, pour garder le lien visuel/sonore
+    changerCouleurPersonnage();
+    changerExpression();
+    jouerAnimationPersonnage();
+    afficherBulleDialogue();
+  }
+
+  function demarrerSpawnBlocs() {
+    creerBlocCible(); // un premier bloc tout de suite
+    function boucleSpawn() {
+      const nbParCycle = 2; // plusieurs blocs à chaque tick pour densifier l'écran
+      for (let i = 0; i < nbParCycle; i++) {
+        creerBlocCible();
+      }
+      intervalSpawnId = setTimeout(boucleSpawn, delaiSpawnActuel());
+    }
+    intervalSpawnId = setTimeout(boucleSpawn, delaiSpawnActuel());
+  }
+
+  // ---------------------------------------------------------------
+  // AUDIO : Web Audio API
+  // Les sons sont des synthèses en direct (oscillateurs), pas de
+  // fichiers externes. Plusieurs "familles" de sons amusants.
+  // ---------------------------------------------------------------
+
+  function jouerSonBoing() {
+    if (!audioCtx) return;
+    const t0 = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(220, t0);
+    osc.frequency.exponentialRampToValueAtTime(440, t0 + 0.08);
+    osc.frequency.exponentialRampToValueAtTime(180, t0 + 0.22);
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(0.3, t0 + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.3);
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start(t0);
+    osc.stop(t0 + 0.32);
+  }
+
+  function jouerSonDing() {
+    if (!audioCtx) return;
+    const t0 = audioCtx.currentTime;
+    const freqBase = choix([523.25, 587.33, 659.25, 783.99, 880]); // notes pentatoniques
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(freqBase, t0);
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(0.25, t0 + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.5);
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start(t0);
+    osc.stop(t0 + 0.5);
+  }
+
+  function jouerSonPop() {
+    if (!audioCtx) return;
+    const t0 = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(150, t0);
+    osc.frequency.exponentialRampToValueAtTime(600, t0 + 0.06);
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(0.22, t0 + 0.015);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.13);
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start(t0);
+    osc.stop(t0 + 0.14);
+  }
+
+  function jouerSonWobble() {
+    if (!audioCtx) return;
+    const t0 = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const lfo = audioCtx.createOscillator();
+    const lfoGain = audioCtx.createGain();
+    const gain = audioCtx.createGain();
+
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(200, t0);
+
+    lfo.type = 'sine';
+    lfo.frequency.setValueAtTime(18, t0);
+    lfoGain.gain.setValueAtTime(60, t0);
+
+    lfo.connect(lfoGain).connect(osc.frequency);
+
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(0.18, t0 + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.35);
+
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start(t0);
+    lfo.start(t0);
+    osc.stop(t0 + 0.36);
+    lfo.stop(t0 + 0.36);
+  }
+
+  function jouerSonGlissando() {
+    if (!audioCtx) return;
+    const t0 = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    const monte = Math.random() > 0.5;
+    osc.frequency.setValueAtTime(monte ? 260 : 700, t0);
+    osc.frequency.exponentialRampToValueAtTime(monte ? 900 : 220, t0 + 0.25);
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(0.22, t0 + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.28);
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start(t0);
+    osc.stop(t0 + 0.3);
+  }
+
+  // Liste des sons jouables, choisie au hasard à chaque interaction
+  const SONS = [jouerSonBoing, jouerSonDing, jouerSonPop, jouerSonWobble, jouerSonGlissando];
+
+  function jouerSonAleatoire() {
+    choix(SONS)();
+  }
+
+  // Petite fanfare ascendante, réservée au déblocage d'un palier :
+  // une courte suite de notes pour marquer l'événement comme spécial.
+  function jouerSonFanfare() {
+    if (!audioCtx) return;
+    const notes = [523.25, 659.25, 783.99, 1046.50]; // do-mi-sol-do (octave)
+    notes.forEach((freq, i) => {
+      const t0 = audioCtx.currentTime + i * 0.12;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, t0);
+      gain.gain.setValueAtTime(0.0001, t0);
+      gain.gain.exponentialRampToValueAtTime(0.28, t0 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.35);
+      osc.connect(gain).connect(audioCtx.destination);
+      osc.start(t0);
+      osc.stop(t0 + 0.36);
+    });
+  }
+
+  // ---------------------------------------------------------------
+  // RÉACTIONS DU PERSONNAGE
+  // ---------------------------------------------------------------
+  function changerCouleurPersonnage() {
+    corps.style.background = choix(PALETTE_CORPS);
+    const couleurChapeau = choix(PALETTE_CHAPEAU);
+    // La forme "rond" utilise un triangle CSS (border-bottom-color),
+    // les formes "carre" et "etoile" utilisent un fond plein (background).
+    // On applique les deux pour rester correct quelle que soit la forme active.
+    chapeau.style.borderBottomColor = couleurChapeau;
+    chapeau.style.background = couleurChapeau;
+    const couleurJambe = corps.style.background;
+    jambeGauche.style.background = couleurJambe;
+    jambeDroite.style.background = couleurJambe;
+  }
+
+  function changerExpression() {
+    // Retire les anciennes classes d'état (yeux / bouche)
+    ETATS_YEUX.forEach(c => c && personnage.classList.remove(c));
+    ETATS_BOUCHE.forEach(c => c && personnage.classList.remove(c));
+    const yeux = choix(ETATS_YEUX);
+    const bouche = choix(ETATS_BOUCHE);
+    if (yeux) personnage.classList.add(yeux);
+    if (bouche) personnage.classList.add(bouche);
+  }
+
+  function jouerAnimationPersonnage() {
+    // Retire une éventuelle animation en cours pour pouvoir la
+    // relancer même si la même classe est tirée deux fois de suite
+    ANIMATIONS.forEach(c => personnage.classList.remove(c));
+    void personnage.offsetWidth; // force le reflow pour relancer l'animation CSS
+    const anim = choix(ANIMATIONS);
+    personnage.classList.add(anim);
+
+    clearTimeout(animTimeoutId);
+    animTimeoutId = setTimeout(() => {
+      personnage.classList.remove(anim);
+    }, 600);
+  }
+
+  function afficherBulleDialogue() {
+    bulleDialogue.textContent = choix(EMOJIS_BULLE);
+    bulleDialogue.classList.remove('bulle-active');
+    void bulleDialogue.offsetWidth;
+    bulleDialogue.classList.add('bulle-active');
+    clearTimeout(bulleTimeoutId);
+    bulleTimeoutId = setTimeout(() => {
+      bulleDialogue.classList.remove('bulle-active');
+    }, 1150);
+  }
+
+  // ---------------------------------------------------------------
+  // EMOJIS VOLANTS AU POINT DE CONTACT
+  // ---------------------------------------------------------------
+  function creerEmojisVolants(x, y) {
+    const nb = aleaInt(2, 4);
+    for (let i = 0; i < nb; i++) {
+      const el = document.createElement('div');
+      el.className = 'emoji-volant';
+      el.textContent = choix(EMOJIS_VOLANTS);
+      el.style.left = (x - 20) + 'px';
+      el.style.top = (y - 20) + 'px';
+      el.style.fontSize = aleaInt(34, 56) + 'px';
+      scene.appendChild(el);
+
+      const decalageX = alea(-90, 90);
+      const decalageY = alea(-160, -70);
+      const rotation = alea(-60, 60);
+      const duree = alea(700, 1100);
+
+      const animation = el.animate([
+        { transform: 'translate(0px, 0px) rotate(0deg) scale(0.4)', opacity: 0 },
+        { transform: `translate(${decalageX * 0.3}px, ${decalageY * 0.4}px) rotate(${rotation * 0.5}deg) scale(1.2)`, opacity: 1, offset: 0.3 },
+        { transform: `translate(${decalageX}px, ${decalageY}px) rotate(${rotation}deg) scale(0.9)`, opacity: 0 }
+      ], {
+        duration: duree,
+        easing: 'cubic-bezier(.2,.7,.3,1)'
+      });
+
+      animation.onfinish = () => el.remove();
     }
   }
 
-  // ============================
-  // Événements (actifs après démarrage)
-  // ============================
-  document.addEventListener('keydown', (e) => {
-    if (!gameStarted) { startGame(); return; }
-    const x = Math.random() * window.innerWidth;
-    const y = Math.random() * window.innerHeight * 0.7;
-    onTap(x, y);
-  });
-
-  document.addEventListener('mousedown', (e) => {
-    if (!gameStarted) return;
-    onTap(e.clientX, e.clientY);
-  });
-
-  document.addEventListener('touchstart', (e) => {
-    if (!gameStarted) return;
-    for (let i = 0; i < e.touches.length; i++) {
-      onTap(e.touches[i].clientX, e.touches[i].clientY);
-    }
-  }, { passive: true });
-
-  let mouseMoveThrottle = 0;
-  document.addEventListener('mousemove', (e) => {
-    if (!gameStarted) return;
-    mouseMoveThrottle++;
-    if (mouseMoveThrottle % 8 === 0) {
-      particles.push(new Particle(e.clientX, e.clientY, '#FFD700'));
-    }
-  });
-
-  // ============================
-  // Init
-  // ============================
-  changeBackground();
-
-  // Respiration du personnage
-  let breathPhase = 0;
-  function breathe() {
-    breathPhase += 0.03;
-    if (!character.classList.contains('bounce') &&
-        !character.classList.contains('wiggle') &&
-        !character.classList.contains('spin') &&
-        !character.classList.contains('grow')) {
-      character.style.transform = `scale(${1 + Math.sin(breathPhase) * 0.03})`;
-    }
-    requestAnimationFrame(breathe);
+  // ---------------------------------------------------------------
+  // FLASH D'ÉCRAN
+  // ---------------------------------------------------------------
+  function declencherFlash() {
+    flashEl.style.background = choix(['#ffffff', '#fff0f5', '#f0fff4', '#fff9e6']);
+    flashEl.classList.remove('flash-actif');
+    void flashEl.offsetWidth;
+    flashEl.classList.add('flash-actif');
   }
-  breathe();
+
+  // ---------------------------------------------------------------
+  // FOND DE SCÈNE : variation toutes les 3 interactions, à l'intérieur
+  // du décor thématique courant (le décor lui-même change au passage
+  // d'un cycle de paliers, cf. avancerVersDecorSuivant)
+  // ---------------------------------------------------------------
+  let indexVariationFond = 0;
+  function changerFondSiNecessaire() {
+    if (nbCoups % 3 === 0) {
+      const variations = DECORS[indexDecorActuel].variations;
+      indexVariationFond = (indexVariationFond + 1) % variations.length;
+      scene.style.background = variations[indexVariationFond];
+    }
+  }
+
+  // ---------------------------------------------------------------
+  // COMPTEUR
+  // ---------------------------------------------------------------
+  function incrementerCompteur() {
+    nbCoups++;
+    coupsDansCycle++;
+    compteurValeur.textContent = nbCoups;
+    compteurEl.classList.remove('compteur-pop');
+    void compteurEl.offsetWidth;
+    compteurEl.classList.add('compteur-pop');
+
+    // Sauvegarde en continu : le total cumulé avance d'un coup à
+    // chaque fois, le record ne monte que si la session en cours
+    // dépasse le meilleur score précédent.
+    const totalActuel = totalAvantSession + nbCoups;
+    const recordActuel = Math.max(recordAvantSession, nbCoups);
+    sauvegarderScore(recordActuel, totalActuel);
+  }
+
+  // ---------------------------------------------------------------
+  // PALIERS DE PROGRESSION DU PERSONNAGE (cycliques)
+  // 4 paliers par décor (10/25/50/100 coups dans le cycle courant).
+  // Le 4e palier déclenche le passage au décor suivant : les
+  // accessoires reviennent à zéro, le fond change de thème, et un
+  // nouveau cycle de 4 paliers recommence. Avec 4 décors, ça donne
+  // une longue progression sans jamais répéter exactement le même
+  // enchaînement visuel.
+  // ---------------------------------------------------------------
+  function verifierPalier() {
+    if (dernierPalierAtteint >= PALIERS.length) return; // sécurité, ne devrait pas arriver
+    const prochain = PALIERS[dernierPalierAtteint];
+    if (coupsDansCycle < prochain.seuil) return;
+
+    dernierPalierAtteint++;
+    personnage.classList.add(prochain.classe);
+    afficherBadgePalier(prochain.emoji, prochain.texte);
+    jouerSonFanfare();
+    declencherPluieConfettis();
+
+    // Dernier palier du cycle atteint : on enchaîne sur le décor suivant
+    if (dernierPalierAtteint >= PALIERS.length) {
+      setTimeout(passerAuDecorSuivant, 2200); // laisse le badge du palier final bien visible avant la transition
+    }
+  }
+
+  // Fait passer le jeu au décor suivant : remet le personnage à son
+  // apparence de départ (seuls les accessoires disparaissent, la
+  // forme choisie au début reste la même) et relance un cycle de
+  // paliers à zéro sur le nouveau thème de fond.
+  function passerAuDecorSuivant() {
+    PALIERS.forEach(p => personnage.classList.remove(p.classe));
+    dernierPalierAtteint = 0;
+    coupsDansCycle = 0;
+
+    indexDecorActuel = (indexDecorActuel + 1) % DECORS.length;
+    indexVariationFond = 0;
+    scene.style.background = DECORS[indexDecorActuel].variations[0];
+
+    afficherBadgeNouveauDecor(DECORS[indexDecorActuel].nom);
+    jouerSonFanfare();
+    declencherPluieConfettis();
+  }
+
+  function afficherBadgeNouveauDecor(nomDecor) {
+    afficherBadgePalier('🌈', 'Nouveau monde : ' + nomDecor + ' !');
+  }
+
+  function afficherBadgePalier(emoji, texte) {
+    badgePalierEmoji.textContent = emoji;
+    badgePalierTexte.textContent = texte;
+    badgePalier.classList.remove('badge-actif');
+    void badgePalier.offsetWidth;
+    badgePalier.classList.add('badge-actif');
+    clearTimeout(badgeTimeoutId);
+    badgeTimeoutId = setTimeout(() => {
+      badgePalier.classList.remove('badge-actif');
+    }, 2450);
+  }
+
+  // Pluie de confettis renforcée : plusieurs points d'explosion
+  // répartis sur l'écran, nettement plus dense qu'un éclatement normal.
+  function declencherPluieConfettis() {
+    const centreX = window.innerWidth / 2;
+    const centreY = window.innerHeight / 2;
+    const nbPoints = 6;
+    for (let i = 0; i < nbPoints; i++) {
+      const dx = alea(-window.innerWidth * 0.3, window.innerWidth * 0.3);
+      const dy = alea(-window.innerHeight * 0.25, window.innerHeight * 0.15);
+      setTimeout(() => {
+        creerExplosionParticules(centreX + dx, centreY + dy);
+      }, i * 90);
+    }
+    declencherFlash();
+  }
+
+  // Remarque : la réaction complète (couleur, expression, animation,
+  // bulle, emojis, particules, flash, son) ne se déclenche désormais
+  // QUE via l'éclatement d'un bloc-cible, cf. fonction eclaterBloc
+  // plus haut. Le tap libre sur le fond ou le personnage est inerte.
+
+  // ---------------------------------------------------------------
+  // GESTION DES ÉVÉNEMENTS D'ENTRÉE
+  // Le tap/clic hors bloc-cible ne déclenche volontairement rien :
+  // seul l'éclatement d'un bloc (cf. gererTapBloc) produit une
+  // réaction. On garde uniquement les écouteurs nécessaires pour
+  // neutraliser les gestes natifs du navigateur sur mobile (zoom,
+  // double-tap, scroll élastique).
+  // ---------------------------------------------------------------
+
+  // Empêche le geste de zoom à deux doigts et le double-tap zoom
+  document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+  let dernierTap = 0;
+  document.addEventListener('touchend', function (e) {
+    const maintenant = Date.now();
+    if (maintenant - dernierTap < 300) e.preventDefault();
+    dernierTap = maintenant;
+  }, { passive: false });
+
+  // ---------------------------------------------------------------
+  // SÉLECTION DU PERSONNAGE (écran d'accueil)
+  // Un tap sur une carte la marque comme choisie, active le bouton
+  // Jouer, et mémorise la forme pour l'appliquer au personnage du jeu.
+  // ---------------------------------------------------------------
+  cartesPersonnage.forEach(function (carte) {
+    carte.addEventListener('click', function () {
+      cartesPersonnage.forEach(c => c.classList.remove('carte-selectionnee'));
+      carte.classList.add('carte-selectionnee');
+      formePersonnageChoisie = carte.dataset.personnage;
+      boutonJouer.disabled = false;
+    });
+  });
+
+  // ---------------------------------------------------------------
+  // DÉMARRAGE : bouton "Jouer !"
+  // L'AudioContext DOIT être créé et résolu de façon synchrone
+  // dans ce handler pour fonctionner sur iOS Safari.
+  // ---------------------------------------------------------------
+  function demarrerJeu(e) {
+    if (e) e.preventDefault();
+    if (boutonJouer.disabled) return; // pas de personnage choisi, on ne démarre pas
+
+    // Récupère le score sauvegardé pour pouvoir l'incrémenter au fil
+    // de cette nouvelle session, sans écraser ce qui existait avant.
+    const scoreSauvegarde = lireScoreSauvegarde();
+    totalAvantSession = scoreSauvegarde.total;
+    recordAvantSession = scoreSauvegarde.record;
+
+    // Création synchrone de l'AudioContext (obligatoire pour iOS)
+    if (!audioCtx) {
+      const AudioContextClasse = window.AudioContext || window.webkitAudioContext;
+      audioCtx = new AudioContextClasse();
+    }
+    // Reprise synchrone si suspendu (Safari le crée parfois suspendu)
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+    // Joue un son "silencieux" immédiat pour débloquer définitivement
+    // le canal audio sur iOS (astuce nécessaire dans certains cas)
+    const oscDeblocage = audioCtx.createOscillator();
+    const gainDeblocage = audioCtx.createGain();
+    gainDeblocage.gain.value = 0.0001;
+    oscDeblocage.connect(gainDeblocage).connect(audioCtx.destination);
+    oscDeblocage.start(audioCtx.currentTime);
+    oscDeblocage.stop(audioCtx.currentTime + 0.01);
+
+    // Applique la forme du personnage choisie, fixe pour toute la session
+    personnage.classList.add('forme-' + formePersonnageChoisie);
+
+    // Affiche la scène de jeu, cache l'accueil
+    ecranAccueil.classList.add('cache');
+    scene.classList.remove('cache');
+
+    // Démarre sur le premier décor thématique
+    scene.style.background = DECORS[0].variations[0];
+
+    // Prépare le décor et lance la montée des blocs-cibles
+    demarrerSpawnBlocs();
+    requestAnimationFrame(majParticules);
+
+    // Petit son de bienvenue + réaction du personnage pour démarrer
+    jouerSonDing();
+    changerCouleurPersonnage();
+  }
+
+  boutonJouer.addEventListener('click', demarrerJeu);
+  boutonJouer.addEventListener('touchend', demarrerJeu, { passive: false });
+
+  // Affiche le score sauvegardé dès l'arrivée sur l'écran d'accueil
+  afficherScoreAccueil();
+
+})();
 </script>
+
 </body>
 </html>

@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover, maximum-scale=1.0, minimum-scale=1.0, shrink-to-fit=no">
+  <title>Frappe de Bébé • Petit Être Magique</title>
+  <!-- Google Fonts : Nunito pour la rondeur -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800&display=swap" rel="stylesheet">
+  <style>
+    /* RESET & PLEIN ÉCRAN */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      touch-action: manipulation;  /* désactive double-tap zoom, gestes navigateur */
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      background: #fce4ec;
+      font-family: 'Nunito', sans-serif;
+      position: fixed;
+      top: 0;
+      left: 0;
+    }
+    /* écran d'accueil (overlay) */
+    #splash {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 20% 20%, #ffe0f0, #f8bbd0);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      transition: opacity 0.5s ease;
+      opacity: 1;
+      pointer-events: auto;
+    }
+    #splash.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+    #play-button {
+      background: #ff4081;
+      border: none;
+      color: white;
+      font-size: 4rem;
+      font-weight: 800;
+      font-family: 'Nunito', sans-serif;
+      padding: 1rem 3rem;
+      border-radius: 120px;
+      box-shadow: 0 20px 35px rgba(255,64,129,0.5);
+      letter-spacing: 0.1em;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s;
+      touch-action: manipulation;
+      background: linear-gradient(135deg, #ff80ab, #f50057);
+      border: 4px solid white;
+    }
+    #play-button:active {
+      transform: scale(0.92);
+      box-shadow: 0 10px 20px rgba(255,64,129,0.7);
+    }
+
+    /* CANVAS PARTICULES (fond animé) */
+    #particle-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      pointer-events: none; /* les taps traversent vers la div interactive */
+    }
+
+    /* CONTENEUR PRINCIPAL : personnage + fond */
+    #main-stage {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none; /* on laisse passer les taps vers la couche interactive */
+    }
+
+    /* COUCHE INTERACTIVE (reçoit tous les événements) */
+    #interactive-layer {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 10;
+      touch-action: manipulation;
+      cursor: pointer;
+      background: transparent;
+    }
+
+    /* PERSONNAGE (CSS pur) */
+    .character {
+      position: relative;
+      width: 200px;
+      height: 200px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transition: transform 0.1s ease;
+      pointer-events: none;
+      z-index: 5;
+      animation: breathe 2.5s ease-in-out infinite;
+    }
+    @keyframes breathe {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.03); }
+      100% { transform: scale(1); }
+    }
+    /* Animations additionnelles (ajoutées via classes JS) */
+    .character.jump {
+      animation: jumpAnim 0.4s ease-out;
+    }
+    @keyframes jumpAnim {
+      0% { transform: translateY(0); }
+      50% { transform: translateY(-25px); }
+      100% { transform: translateY(0); }
+    }
+    .character.wiggle {
+      animation: wiggleAnim 0.3s ease-in-out;
+    }
+    @keyframes wiggleAnim {
+      0% { transform: rotate(0); }
+      25% { transform: rotate(8deg); }
+      75% { transform: rotate(-8deg); }
+      100% { transform: rotate(0); }
+    }
+    .character.spin {
+      animation: spinAnim 0.5s ease-in-out;
+    }
+    @keyframes spinAnim {
+      0% { transform: rotate(0); }
+      100% { transform: rotate(360deg); }
+    }
+    .character.grow {
+      animation: growAnim 0.35s ease-in-out;
+    }
+    @keyframes growAnim {
+      0% { transform: scale(1); }
+      40% { transform: scale(1.25); }
+      100% { transform: scale(1); }
+    }
+
+    /* chapeau triangulaire */
+    .hat {
+      width: 0;
+      height: 0;
+      border-left: 35px solid transparent;
+      border-right: 35px solid transparent;
+      border-bottom: 55px solid #ffb74d;
+      filter: drop-shadow(0 6px 4px rgba(0,0,0,0.15));
+      margin-bottom: -8px;
+      transition: border-bottom-color 0.2s;
+    }
+    .body-shape {
+      width: 130px;
+      height: 110px;
+      background: #ffcc80;
+      border-radius: 50% 50% 45% 45%;
+      position: relative;
+      box-shadow: 0 12px 18px rgba(0,0,0,0.15);
+      transition: background 0.2s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .eyes-container {
+      display: flex;
+      gap: 22px;
+      margin-top: 10px;
+    }
+    .eye {
+      width: 28px;
+      height: 28px;
+      background: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: inset 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .pupil {
+      width: 14px;
+      height: 14px;
+      background: #3e2723;
+      border-radius: 50%;
+      transition: all 0.1s;
+    }
+    /* expressions */
+    .eye.happy .pupil {
+      height: 6px;
+      border-radius: 0 0 50% 50%;
+      background: #3e2723;
+      margin-top: 5px;
+    }
+    .eye.surprised .pupil {
+      width: 18px;
+      height: 18px;
+    }
+    .eye.love .pupil {
+      background: transparent;
+      position: relative;
+    }
+    .eye.love .pupil::before,
+    .eye.love .pupil::after {
+      content: "❤️";
+      position: absolute;
+      font-size: 20px;
+      top: -8px;
+      left: -6px;
+    }
+    .cheeks {
+      display: flex;
+      gap: 70px;
+      margin-top: -8px;
+    }
+    .cheek {
+      width: 22px;
+      height: 14px;
+      background: #ff8a80;
+      border-radius: 50%;
+      opacity: 0.7;
+    }
+    .mouth {
+      width: 30px;
+      height: 12px;
+      background: #c62828;
+      border-radius: 0 0 25px 25px;
+      margin-top: 6px;
+      transition: all 0.2s;
+    }
+    .mouth.open {
+      width: 25px;
+      height: 22px;
+      border-radius: 0 0 25px 25px;
+      background: #b71c1c;
+    }
+    .mouth.bigsmile {
+      width: 40px;
+      height: 20px;
+      border-radius: 0 0 40px 40px;
+    }
+    .mouth.oh {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #b71c1c;
+    }
+    .legs {
+      display: flex;
+      gap: 30px;
+      margin-top: 2px;
+    }
+    .leg {
+      width: 18px;
+      height: 25px;
+      background: #ffb74d;
+      border-radius: 0 0 12px 12px;
+    }
+
+    /* bulle de dialogue */
+    .speech-bubble {
+      position: absolute;
+      top: -55px;
+      background: white;
+      border-radius: 30px;
+      padding: 8px 18px;
+      font-size: 2.2rem;
+      box-shadow: 0 8px 12px rgba(0,0,0,0.1);
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity 0.25s, transform 0.25s;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+    .speech-bubble.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* compteur */
+    #counter {
+      position: absolute;
+      top: 18px;
+      right: 25px;
+      font-size: 2.5rem;
+      font-weight: 800;
+      color: white;
+      text-shadow: 2px 2px 0 #ff4081;
+      z-index: 20;
+      background: rgba(255,255,255,0.3);
+      backdrop-filter: blur(10px);
+      padding: 0.2rem 1.2rem;
+      border-radius: 60px;
+      letter-spacing: 2px;
+    }
+
+    /* emojis volants */
+    .flying-emoji {
+      position: absolute;
+      font-size: 4rem;
+      pointer-events: none;
+      z-index: 25;
+      animation: flyUp 0.9s ease-out forwards;
+      user-select: none;
+    }
+    @keyframes flyUp {
+      0% { opacity: 1; transform: translate(0, 0) scale(0.5); }
+      30% { opacity: 1; transform: translate(var(--dx), var(--dy)) scale(1.3); }
+      100% { opacity: 0; transform: translate(var(--dx2), var(--dy2)) scale(0.6); }
+    }
+  </style>
+</head>
+<body>
+  <!-- ÉCRAN D'ACCUEIL -->
+  <div id="splash">
+    <button id="play-button">🎈 JOUER !</button>
+  </div>
+
+  <!-- Canvas particules (fond) -->
+  <canvas id="particle-canvas"></canvas>
+
+  <!-- Scène principale avec personnage -->
+  <div id="main-stage">
+    <div class="character" id="character">
+      <div class="speech-bubble" id="speech-bubble">🐣</div>
+      <div class="hat" id="hat"></div>
+      <div class="body-shape" id="body-shape">
+        <div class="eyes-container" id="eyes-container">
+          <div class="eye" id="left-eye"><div class="pupil"></div></div>
+          <div class="eye" id="right-eye"><div class="pupil"></div></div>
+        </div>
+        <div class="cheeks">
+          <div class="cheek"></div>
+          <div class="cheek"></div>
+        </div>
+        <div class="mouth" id="mouth"></div>
+      </div>
+      <div class="legs">
+        <div class="leg"></div>
+        <div class="leg"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Couche interactive (reçoit tous les événements) -->
+  <div id="interactive-layer"></div>
+
+  <!-- Compteur de coups -->
+  <div id="counter">0</div>
+
+  <script>
+    (function() {
+      // ---------- ÉTAT GLOBAL ----------
+      let audioCtx = null;            // sera initialisé par le bouton jouer
+      let tapCount = 0;
+      let bgColorChangeCounter = 0;
+      
+      // Éléments DOM
+      const splash = document.getElementById('splash');
+      const playButton = document.getElementById('play-button');
+      const character = document.getElementById('character');
+      const bodyShape = document.getElementById('body-shape');
+      const hat = document.getElementById('hat');
+      const leftEye = document.getElementById('left-eye');
+      const rightEye = document.getElementById('right-eye');
+      const mouth = document.getElementById('mouth');
+      const speechBubble = document.getElementById('speech-bubble');
+      const counterDisplay = document.getElementById('counter');
+      const interactiveLayer = document.getElementById('interactive-layer');
+      const canvas = document.getElementById('particle-canvas');
+      const ctx = canvas.getContext('2d');
+
+      // Liste des emojis mignons pour bulles et effets
+      const cuteEmojis = ['🐣','🐥','🐻','🐼','🐨','🦊','🐸','🐙','🍭','🍬','🧁','🍩','🌈','⭐','🌟','💖','🎈','🎀','🐞','🌼'];
+      
+      // Couleurs pastel pour le fond
+      const pastelGradients = [
+        ['#fce4ec', '#f8bbd0'],
+        ['#e0f7fa', '#b2ebf2'],
+        ['#f3e5f5', '#e1bee7'],
+        ['#fff3e0', '#ffccbc'],
+        ['#e8f5e9', '#c8e6c9'],
+        ['#f1f8e9', '#dcedc8'],
+        ['#ede7f6', '#d1c4e9']
+      ];
+      
+      // Animations possibles
+      const animClasses = ['jump', 'wiggle', 'spin', 'grow'];
+      
+      // Expressions
+      const expressions = {
+        normal: () => {
+          leftEye.className = 'eye'; rightEye.className = 'eye';
+          mouth.className = 'mouth';
+        },
+        happy: () => {
+          leftEye.className = 'eye happy'; rightEye.className = 'eye happy';
+          mouth.className = 'mouth bigsmile';
+        },
+        surprised: () => {
+          leftEye.className = 'eye surprised'; rightEye.className = 'eye surprised';
+          mouth.className = 'mouth oh';
+        },
+        love: () => {
+          leftEye.className = 'eye love'; rightEye.className = 'eye love';
+          mouth.className = 'mouth open';
+        }
+      };
+
+      // Couleurs personnage
+      const bodyColors = ['#ffcc80','#ffab91','#bcaaa4','#a5d6a7','#90caf9','#f48fb1','#ce93d8'];
+      const hatColors = ['#ffb74d','#ef5350','#66bb6a','#42a5f5','#ab47bc','#ff7043','#26c6da'];
+
+      // ---------- AUDIO (Web Audio API) ----------
+      function createAudioContext() {
+        if (audioCtx) return audioCtx;
+        try {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          // Déblocage iOS : on resume si suspendu
+          if (audioCtx.state === 'suspended') {
+            audioCtx.resume().then(() => console.log('AudioContext résumé'));
+          }
+          return audioCtx;
+        } catch(e) {
+          console.warn('Web Audio non supporté');
+          return null;
+        }
+      }
+
+      function playBoing() {
+        if (!audioCtx) return;
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(400, now);
+        osc.frequency.exponentialRampToValueAtTime(600, now + 0.1);
+        gain.gain.setValueAtTime(0.4, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+        osc.connect(gain).connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.3);
+      }
+
+      function playPop() {
+        if (!audioCtx) return;
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(500, now);
+        osc.frequency.exponentialRampToValueAtTime(200, now + 0.15);
+        gain.gain.setValueAtTime(0.35, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+        osc.connect(gain).connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.2);
+      }
+
+      function playDing() {
+        if (!audioCtx) return;
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(800, now);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+        osc.connect(gain).connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.2);
+      }
+
+      function playWobble() {
+        if (!audioCtx) return;
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(150, now);
+        osc.frequency.linearRampToValueAtTime(300, now + 0.1);
+        gain.gain.setValueAtTime(0.25, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+        osc.connect(gain).connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.25);
+      }
+
+      const soundEffects = [playBoing, playPop, playDing, playWobble];
+
+      // ---------- EFFETS VISUELS (particules, emojis, flash) ----------
+      function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      }
+      window.addEventListener('resize', resizeCanvas);
+      resizeCanvas();
+
+      // Particules (stockées pour animation)
+      let particles = [];
+      class Particle {
+        constructor(x, y, type) {
+          this.x = x;
+          this.y = y;
+          this.type = type; // 'circle','square','star'
+          this.size = Math.random() * 15 + 6;
+          this.vx = (Math.random() - 0.5) * 8;
+          this.vy = (Math.random() - 0.5) * 8 - 2;
+          this.life = 1.0;
+          this.decay = 0.015 + Math.random() * 0.03;
+          this.color = `hsl(${Math.floor(Math.random() * 360)}, 80%, 70%)`;
+        }
+        update() {
+          this.x += this.vx;
+          this.y += this.vy;
+          this.vy += 0.1; // gravité légère
+          this.life -= this.decay;
+        }
+        draw(ctx) {
+          ctx.save();
+          ctx.globalAlpha = this.life;
+          ctx.fillStyle = this.color;
+          if (this.type === 'circle') {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.size, 0, Math.PI*2);
+            ctx.fill();
+          } else if (this.type === 'square') {
+            ctx.fillRect(this.x - this.size/2, this.y - this.size/2, this.size, this.size);
+          } else if (this.type === 'star') {
+            ctx.font = `${this.size*2}px Nunito`;
+            ctx.fillText('⭐', this.x-this.size, this.y-this.size/2);
+          }
+          ctx.restore();
+        }
+        get alive() { return this.life > 0; }
+      }
+
+      function burstParticles(clientX, clientY) {
+        const types = ['circle','circle','square','star'];
+        for(let i=0; i<12; i++) {
+          particles.push(new Particle(clientX, clientY, types[Math.floor(Math.random()*types.length)]));
+        }
+      }
+
+      function animateParticles() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        particles = particles.filter(p => p.alive);
+        particles.forEach(p => {
+          p.update();
+          p.draw(ctx);
+        });
+        requestAnimationFrame(animateParticles);
+      }
+      animateParticles();
+
+      // Emojis volants
+      function spawnFlyingEmojis(x, y) {
+        const count = Math.floor(Math.random() * 3) + 2; // 2 à 4
+        for(let i=0; i<count; i++) {
+          const emoji = cuteEmojis[Math.floor(Math.random() * cuteEmojis.length)];
+          const el = document.createElement('div');
+          el.className = 'flying-emoji';
+          el.textContent = emoji;
+          const angle = Math.random() * Math.PI * 2;
+          const distance = 50 + Math.random() * 70;
+          const dx = Math.cos(angle) * distance;
+          const dy = Math.sin(angle) * distance - 30;
+          const dx2 = dx * 1.8;
+          const dy2 = dy * 1.8 - 40;
+          el.style.setProperty('--dx', dx+'px');
+          el.style.setProperty('--dy', dy+'px');
+          el.style.setProperty('--dx2', dx2+'px');
+          el.style.setProperty('--dy2', dy2+'px');
+          el.style.left = x + 'px';
+          el.style.top = y + 'px';
+          document.body.appendChild(el);
+          el.addEventListener('animationend', () => el.remove());
+        }
+      }
+
+      // Flash écran
+      function screenFlash() {
+        const flash = document.createElement('div');
+        flash.style.position = 'fixed';
+        flash.style.inset = '0';
+        flash.style.background = 'rgba(255,255,255,0.25)';
+        flash.style.zIndex = '30';
+        flash.style.pointerEvents = 'none';
+        document.body.appendChild(flash);
+        setTimeout(() => flash.remove(), 150);
+      }
+
+      // Changement fond (dégradé)
+      function changeBackground() {
+        const grad = pastelGradients[Math.floor(Math.random() * pastelGradients.length)];
+        document.body.style.background = `radial-gradient(circle at 30% 30%, ${grad[0]}, ${grad[1]})`;
+      }
+
+      // ---------- RÉACTION DU PERSONNAGE ----------
+      function randomizeCharacter() {
+        // Couleur corps et chapeau
+        bodyShape.style.background = bodyColors[Math.floor(Math.random() * bodyColors.length)];
+        hat.style.borderBottomColor = hatColors[Math.floor(Math.random() * hatColors.length)];
+        
+        // Animation
+        character.classList.remove(...animClasses);
+        void character.offsetWidth; // force reflow
+        const anim = animClasses[Math.floor(Math.random() * animClasses.length)];
+        character.classList.add(anim);
+        
+        // Expression
+        const exprKeys = Object.keys(expressions);
+        const expr = exprKeys[Math.floor(Math.random() * exprKeys.length)];
+        expressions[expr]();
+        
+        // Bulle de dialogue
+        const emoji = cuteEmojis[Math.floor(Math.random() * cuteEmojis.length)];
+        speechBubble.textContent = emoji;
+        speechBubble.classList.add('show');
+        clearTimeout(window.bubbleTimeout);
+        window.bubbleTimeout = setTimeout(() => {
+          speechBubble.classList.remove('show');
+        }, 1200);
+      }
+
+      // ---------- GESTIONNAIRE D'INTERACTION UNIQUE ----------
+      function handleInteraction(e) {
+        // Empêcher comportements par défaut (scroll, zoom)
+        e.preventDefault();
+        
+        // Récupérer les points de contact (multi-touch)
+        let clientX, clientY;
+        if (e.touches) {
+          // Pour multi-touch, on traite chaque doigt
+          for(let i=0; i<e.touches.length; i++) {
+            const touch = e.touches[i];
+            triggerReaction(touch.clientX, touch.clientY);
+          }
+          return;
+        } else {
+          clientX = e.clientX;
+          clientY = e.clientY;
+          triggerReaction(clientX, clientY);
+        }
+      }
+
+      function triggerReaction(x, y) {
+        // Incrémenter compteur
+        tapCount++;
+        counterDisplay.textContent = tapCount;
+        
+        // Changement fond toutes les 3 interactions
+        bgColorChangeCounter++;
+        if(bgColorChangeCounter % 3 === 0) {
+          changeBackground();
+        }
+        
+        // Réaction personnage
+        randomizeCharacter();
+        
+        // Son aléatoire
+        const sound = soundEffects[Math.floor(Math.random() * soundEffects.length)];
+        sound();
+        
+        // Effets visuels
+        burstParticles(x, y);
+        spawnFlyingEmojis(x, y);
+        screenFlash();
+      }
+
+      // ---------- ÉCOUTEURS D'ÉVÉNEMENTS ----------
+      function bindEvents() {
+        // Desktop
+        interactiveLayer.addEventListener('click', handleInteraction);
+        // Clavier (touche espace ou n'importe quelle touche)
+        document.addEventListener('keydown', (e) => {
+          // On simule un point au centre de l'écran
+          handleInteraction({ preventDefault: ()=>{}, clientX: window.innerWidth/2, clientY: window.innerHeight/2 });
+        });
+        // Mobile touch
+        interactiveLayer.addEventListener('touchstart', handleInteraction, {passive: false});
+        // Pour glisser aussi (certains bébés glissent)
+        interactiveLayer.addEventListener('touchmove', (e) => {
+          e.preventDefault();
+          if(e.touches.length > 0) {
+            for(let i=0; i<e.touches.length; i++) {
+              triggerReaction(e.touches[i].clientX, e.touches[i].clientY);
+            }
+          }
+        }, {passive: false});
+        // Empêcher le scroll élastique et zoom
+        document.addEventListener('gesturestart', (e) => e.preventDefault());
+        document.addEventListener('gesturechange', (e) => e.preventDefault());
+        document.addEventListener('gestureend', (e) => e.preventDefault());
+      }
+
+      // ---------- DÉMARRAGE (bouton jouer) ----------
+      function startExperience() {
+        // Création STRICTEMENT SYNCHRONE de l'AudioContext dans le handler
+        createAudioContext();
+        // On s'assure qu'il est résumé si besoin (mobile)
+        if(audioCtx && audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+        // Cacher l'écran d'accueil
+        splash.classList.add('hidden');
+        // Premier changement de fond
+        changeBackground();
+        // Lier les événements
+        bindEvents();
+        // Petit son de bienvenue
+        setTimeout(() => {
+          if(audioCtx) playDing();
+        }, 100);
+      }
+
+      playButton.addEventListener('click', startExperience);
+      playButton.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        startExperience();
+      });
+
+      // Initialisation du canvas et prévention zoom
+      window.addEventListener('load', () => {
+        resizeCanvas();
+        // Désactiver le double-tap zoom sur iOS
+        document.addEventListener('touchstart', (e) => {
+          if(e.target === interactiveLayer || e.target === playButton) return;
+        }, {passive: false});
+      });
+
+    })();
+  </script>
+</body>
+</html>
