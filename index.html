@@ -1827,6 +1827,78 @@
   }, { passive: false });
 
   // ---------------------------------------------------------------
+  // CLAVIER : n'importe quelle frappe fait réagir l'écran
+  // Pensé pour les tout-petits qui tapent au hasard sur le clavier.
+  // Chaque touche éclate le bloc le plus haut (celui qui va bientôt
+  // sortir de l'écran) ; s'il n'y a aucun bloc, le personnage réagit
+  // quand même pour qu'une frappe ne reste jamais sans réponse.
+  // ---------------------------------------------------------------
+
+  // Petit anti-rebond : une touche maintenue enfoncée déclenche la
+  // répétition automatique du système, on la limite pour éviter le
+  // mitraillage d'effets et de sons.
+  let dernierEclatClavier = 0;
+  const DELAI_MINI_CLAVIER = 90; // ms
+
+  function blocLePlusHaut() {
+    let meilleur = null;
+    let meilleurY = Infinity;
+    blocsActifs.forEach(function (bloc) {
+      if (!bloc.isConnected) { blocsActifs.delete(bloc); return; }
+      const rect = bloc.getBoundingClientRect();
+      if (rect.top < meilleurY) {
+        meilleurY = rect.top;
+        meilleur = bloc;
+      }
+    });
+    return meilleur;
+  }
+
+  function reagirAuClavier() {
+    const maintenant = Date.now();
+    if (maintenant - dernierEclatClavier < DELAI_MINI_CLAVIER) return;
+    dernierEclatClavier = maintenant;
+
+    const bloc = blocLePlusHaut();
+    if (bloc) {
+      blocsActifs.delete(bloc);
+      const rect = bloc.getBoundingClientRect();
+      bloc.classList.add('bloc-eclate');
+      setTimeout(() => bloc.remove(), 340);
+      eclaterBloc(rect.left + rect.width / 2, rect.top + rect.height / 2);
+    } else {
+      // Aucun bloc à l'écran : le personnage répond tout de même
+      changerCouleurPersonnage();
+      changerExpression();
+      jouerAnimationPersonnage();
+      afficherBulleDialogue();
+      jouerSonAleatoire();
+      declencherFlash();
+    }
+  }
+
+  document.addEventListener('keydown', function (e) {
+    // Écran d'accueil : la barre d'espace ou Entrée lance la partie
+    // (le reste du clavier n'y fait rien, pour ne pas démarrer par accident).
+    if (!ecranAccueil.classList.contains('cache')) {
+      if (e.key === ' ' || e.key === 'Enter') {
+        e.preventDefault();
+        demarrerJeu();
+      }
+      return;
+    }
+
+    // En jeu : on ignore les raccourcis système (Cmd/Ctrl/Alt) pour
+    // laisser l'adulte reprendre la main sur le navigateur si besoin.
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+    // Empêche l'espace de faire défiler la page
+    if (e.key === ' ') e.preventDefault();
+
+    reagirAuClavier();
+  });
+
+  // ---------------------------------------------------------------
   // SÉLECTION DU PERSONNAGE (écran d'accueil)
   // Un tap sur une carte la marque comme choisie, active le bouton
   // Jouer, et mémorise la forme pour l'appliquer au personnage du jeu.
